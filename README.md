@@ -1,8 +1,6 @@
 # Navigate to project directory
 cd /path/to/your/Custom-Tests-Battery
 
-# Create README.md with content in one command
-cat > README.md << 'EOF'
 # Custom Tests Battery
 
 A comprehensive psychological testing suite for cognitive assessment and research, built with PyQt6 and featuring advanced crash recovery capabilities.
@@ -41,24 +39,24 @@ A comprehensive psychological testing suite for cognitive assessment and researc
 - **Audio**: Microphone for speech recording tasks
 
 ### Python Dependencies
-\`\`\`
-PyQt6>=6.4.0
-pandas>=1.5.0
-numpy>=1.21.0
-pyaudio>=0.2.11          # Audio recording
-sounddevice>=0.4.5       # Alternative audio backend
-librosa>=0.9.0           # Audio analysis
-scipy>=1.9.0             # Scientific computing
-watchdog>=2.1.9          # Development auto-reload
-\`\`\`
+
+- PyQt6>=6.4.0
+- pandas>=1.5.0
+- numpy>=1.21.0
+- pyaudio>=0.2.11       
+- sounddevice>=0.4.5      
+- librosa>=0.9.0           
+- scipy>=1.9.0           
+- watchdog>=2.1.9       
+
 
 ## 🚀 Quick Start
 
 ### For End Users
 
 1. **Download the latest release** from the [Releases](https://github.com/yourusername/custom-tests-battery/releases) page
-2. **Windows**: Run the \`.exe\` file
-3. **macOS**: Open the \`.dmg\` file and drag to Applications
+2. **Windows**: Run the .exe file
+3. **macOS**: Open the .dmg file and drag to Applications
 
 ### For Developers
 
@@ -68,40 +66,32 @@ watchdog>=2.1.9          # Development auto-reload
 
 Ensure you have Python 3.9+ installed:
 - **Windows**: Download from [python.org](https://www.python.org/downloads/)
-- **macOS**: Install via Homebrew: \`brew install python\`
-- **Linux**: Use your package manager: \`sudo apt install python3\`
+- **macOS**: Install via Homebrew: brew install python
+- **Linux**: Use your package manager: sudo apt install python3
 
 ### Installation
 
 1. **Clone the repository**
-   \`\`\`bash
-   git clone https://github.com/yourusername/custom-tests-battery.git
-   cd custom-tests-battery
-   \`\`\`
+   - git clone https://github.com/yourusername/custom-tests-battery.git
+   - cd custom-tests-battery
 
 2. **Install dependencies**
-   \`\`\`bash
-   # Windows
-   pip install -r requirements-dev.txt
+   - Windows
+      - pip install -r requirements-dev.txt
    
-   # macOS/Linux  
-   pip3 install -r requirements-dev.txt
-   \`\`\`
+   - macOS/Linux  
+      - pip3 install -r requirements-dev.txt
 
 3. **Start development mode**
    
    **macOS/Linux:**
-   \`\`\`bash
    ./dev.sh
-   \`\`\`
    
    **Windows:**
-   \`\`\`cmd
    dev.bat
-   \`\`\`
 
 4. **Start coding!** 
-   - Edit any \`.py\` file
+   - Edit any .py file
    - App automatically reloads with changes
    - Test visually in real-time
 
@@ -111,17 +101,16 @@ Ensure you have Python 3.9+ installed:
 
 The development launcher provides instant feedback:
 
-\`\`\`bash
-# macOS/Linux
-./dev.sh
+- macOS/Linux
+   - ./dev.sh
 
-# Windows
-dev.bat
-\`\`\`
+- Windows
+   - dev.bat
+
 
 **Features:**
 - ✅ **Auto-reload** - Changes reflect instantly
-- ✅ **Executable simulation** - Tests like real .exe/.dmg
+- ✅ **Executable simulation** - Tests like real .exe or .dmg
 - ✅ **Cross-platform** - Same experience on all systems
 - ✅ **Crash recovery** - Test recovery features in development
 
@@ -135,73 +124,41 @@ dev.bat
 
 ### Testing Individual Components
 
-\`\`\`bash
 # Test specific windows directly
-python welcome.py           # Welcome screen
-python menu_biodata.py      # Biodata form
-python selection_menu.py    # Test selection
-python stroop_colorword_task.py  # Stroop task
-\`\`\`
+- python welcome.py           # Welcome screen
+- python menu_biodata.py      # Biodata form
+- python selection_menu.py    # Test selection
+- python stroop_colorword_task.py  # Stroop task
 
 ## 📦 Building Executables
 
 ### Windows (.exe)
 
-\`\`\`bash
-# Install PyInstaller
-pip install pyinstaller
+- Install PyInstaller
+   - pip install pyinstaller
 
-# Build executable
-pyinstaller --onefile --windowed welcome.py
+- Build executable
+   - pyinstaller --onefile --windowed welcome.py
 
-# Output: dist/welcome.exe
-\`\`\`
+- Output: dist/welcome.exe
 
 ### macOS (.dmg)
 
-\`\`\`bash
-# Install py2app
-pip install py2app
+- Install py2app
+   - pip install py2app
 
-# Create setup.py (if not exists)
-python setup.py py2app
+- Create setup.py (if not exists)
+   - python setup.py py2app
 
-# Output: dist/Custom Tests Battery.app
-\`\`\`
+- Output: dist/Custom Tests Battery.app
 
 ### Advanced Build Options
 
-\`\`\`bash
-# Windows - with icon and additional files
-pyinstaller --onefile --windowed --icon=icon.ico --add-data "stroop_colorword_list.txt;." welcome.py
+- Windows - with icon and additional files
+   - pyinstaller --onefile --windowed --icon=icon.ico --add-data "stroop_colorword_list.txt;." welcome.py
 
-# macOS - with app bundle
-python setup.py py2app --packages=crash_recovery_system
-\`\`\`
-
-## 📁 Project Structure
-
-\`\`\`
-Custom Tests Battery/
-├── crash_recovery_system/          # Crash recovery core
-│   ├── __init__.py
-│   ├── crash_handler.py           # Global exception handling
-│   ├── session_manager.py         # Session orchestration
-│   └── task_state_saver.py        # Task-level recovery mixins
-├── dev_tools/                     # Development utilities
-│   └── dev_launcher.py            # Auto-reload development runner
-├── welcome.py                     # Entry point & welcome screen
-├── menu_biodata.py               # Participant information form
-├── selection_menu.py             # Test selection interface
-├── stroop_colorword_task.py      # Stroop Color-Word implementation
-├── experiment_data_saver.py      # Centralized data persistence
-├── stroop_colorword_list.txt     # Stimulus data
-├── requirements-dev.txt          # Development dependencies
-├── dev.sh                        # macOS/Linux development launcher
-├── dev.bat                       # Windows development launcher
-├── .gitignore                    # Git ignore rules
-└── README.md                     # This file
-\`\`\`
+- macOS - with app bundle
+   - python setup.py py2app --packages=crash_recovery_system
 
 ### Core Modules
 
@@ -234,16 +191,6 @@ Custom Tests Battery/
 - **Results**: Exported as structured text files with CSV data
 - **Crash recovery**: Automatic session restoration on unexpected closure
 
-### Customization
-
-**Modify test parameters** in the respective task files:
-\`\`\`python
-# In stroop_colorword_task.py
-NUM_TRIALS = 80                    # Number of trials
-RECORDING_DURATION_SECONDS = 3.0   # Recording length
-PRE_STIMULUS_DELAY_MS = 200        # Pre-stimulus delay
-\`\`\`
-
 ## 🔧 Configuration
 
 ### Audio Settings
@@ -261,49 +208,6 @@ The application automatically detects audio devices. For optimal performance:
 - **macOS**: \`/Users/[Username]/Documents/Custom Tests Battery Data/\`
 - **Linux**: \`/home/[Username]/Documents/Custom Tests Battery Data/\`
 
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Audio recording not working:**
-\`\`\`bash
-# Install audio dependencies
-pip install pyaudio sounddevice
-
-# macOS additional step
-brew install portaudio
-\`\`\`
-
-**PyQt6 import errors:**
-\`\`\`bash
-# Reinstall PyQt6
-pip uninstall PyQt6
-pip install PyQt6
-\`\`\`
-
-**Permission errors on macOS:**
-\`\`\`bash
-# Grant microphone access in System Preferences > Security & Privacy
-\`\`\`
-
-**Development launcher not starting:**
-\`\`\`bash
-# Make scripts executable (macOS/Linux)
-chmod +x dev.sh
-chmod +x dev_tools/dev_launcher.py
-
-# Check Python installation
-python3 --version  # macOS/Linux
-python --version   # Windows
-\`\`\`
-
-### Debugging
-
-Enable verbose logging by setting environment variables:
-\`\`\`bash
-export APP_DEBUG=true
-export APP_LOG_LEVEL=DEBUG
-\`\`\`
 
 ## 🤝 Contributing
 
