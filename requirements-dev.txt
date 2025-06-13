@@ -1,0 +1,27 @@
+# ===================================
+# MAIN APPLICATION DEPENDENCIES
+# ===================================
+PyQt6>=6.4.0
+pandas>=1.5.0
+numpy>=1.21.0
+
+# Audio processing (optional but recommended)
+pyaudio>=0.2.11
+sounddevice>=0.4.5
+librosa>=0.9.0
+scipy>=1.9.0
+
+# ===================================
+# DEVELOPMENT DEPENDENCIES
+# ===================================
+# File watching for auto-reload
+watchdog>=2.1.9
+
+# Building executables
+pyinstaller>=5.0.0  # Windows
+py2app>=0.28.0      # macOS (install only on macOS)
+
+# Code quality (optional)
+# black>=22.0.0     # Code formatter
+# flake8>=4.0.0     # Linting
+# pytest>=7.0.0     # Testing
