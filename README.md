@@ -1,6 +1,3 @@
-# Navigate to project directory
-cd /path/to/your/Custom-Tests-Battery
-
 # Custom Tests Battery
 
 A comprehensive psychological testing suite for cognitive assessment and research, built with PyQt6 and featuring advanced crash recovery capabilities.
