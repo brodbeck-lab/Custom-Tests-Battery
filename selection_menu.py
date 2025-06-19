@@ -13,6 +13,12 @@ from crash_recovery_system.session_manager import get_session_manager, initializ
 from crash_recovery_system.task_state_saver import get_recovery_info, CrashDetector
 import crash_recovery_system.crash_handler as crash_handler  # Initialize crash handler
 
+# Import Working Memory Task
+from letter_monitoring_task.cvcDialog import CvcDialog
+from letter_monitoring_task.sgGetReadyDialog import CvcGetReadyDialog
+from letter_monitoring_task.cvcTest import CvcTestWidget
+from letter_monitoring_task.cvc_utils import load_cvc_sequence
+
 class SelectionMenu(QMainWindow):
     def __init__(self, buttons_size=1.0, buttons_elevation=1.0, participant_id=None, participant_folder_path=None, recovery_mode=False):
         super().__init__()
@@ -583,55 +589,79 @@ class SelectionMenu(QMainWindow):
     
     def launch_letter_monitoring_task(self, x_pos, y_pos):
         """Launch Letter Monitoring Task (placeholder for future implementation)."""
-        print("Letter Monitoring Task - Not yet implemented")
-        
-        # Show placeholder message
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Icon.Information)
-        msg.setWindowTitle("Task Not Available")
-        msg.setText("Letter Monitoring Task")
-        msg.setInformativeText(
-            "This task is not yet implemented.\n\n"
-            "It will be available in a future version of the application.\n\n"
-            "Current available tasks:\n"
-            "• Stroop Colour-Word Task ✅"
+        try:
+            # === Step 1: Show config dialog ===
+            config_dialog = CvcDialog(monitors=1, parent=self)
+            if not config_dialog.exec():
+                print("User canceled configuration")
+                return
+
+            # pid = config_dialog.pid
+            time_limit = config_dialog.presentation_time
+            list_id = config_dialog.list_id
+            n_stimuli = config_dialog.n_stimuli
+
+            # === Step 2: Show get ready dialog ===
+            get_ready = CvcGetReadyDialog(w=800, h=600, x=x_pos, y=y_pos, parent=self)
+            if not get_ready.exec():
+                print("User canceled get ready dialog")
+                return
+
+            # === Step 3: Load sequence ===
+            seq_path = "letter_monitoring_task/vmtcvc.seq"
+            full_sequence = load_cvc_sequence(seq_path, list_id=list_id)
+            if not full_sequence:
+                raise ValueError("Sequence file is empty or failed to load.")
+            sequence = full_sequence[:n_stimuli + 2] # +2 for practice
+ 
+            # # === Step 4: Launch task ===
+            # self.cvc_test_widget = CvcTestWidget(sequence, presentation_time=time_limit)
+            # self.cvc_test_widget.experiment_finished.connect(self.handle_working_memory_result)
+            # self.cvc_test_widget.show()
+            # self.hide()
+
+            # === Step 4: Launch task INSIDE this window ===
+            self.cvc_test_widget = CvcTestWidget(sequence, presentation_time=time_limit)
+
+            # Remove the old central widget (which contains the menu)
+            old_central = self.centralWidget()
+            old_central.setParent(None)
+
+            # Set new test widget as central
+            self.setCentralWidget(self.cvc_test_widget)
+
+            # Connect result handler
+            self.cvc_test_widget.experiment_finished.connect(self.handle_working_memory_result)
+
+
+        except Exception as e:
+            print(f"Failed to launch Working Memory Task: {e}")
+            import traceback
+            traceback.print_exc()
+            QMessageBox.critical(self, "Error", f"Could not launch Working Memory Task.\n\n{e}")
+
+    def handle_working_memory_result(self):
+        """Handle the end of the Working Memory Task."""
+        print("Working Memory Task completed.")
+
+        # Clean up test widget
+        if hasattr(self, "cvc_test_widget"):
+            self.cvc_test_widget.setParent(None)
+            self.cvc_test_widget.deleteLater()
+            del self.cvc_test_widget
+            
+        # print("\n".join(log_lines))
+
+        # === Restore original SelectionMenu layout ===
+        self.__init__(
+            buttons_size=1.0,
+            buttons_elevation=1.0,
+            participant_id=self.participant_id,
+            participant_folder_path=self.participant_folder_path,
+            recovery_mode=self.recovery_mode
         )
-        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-        msg.exec()
         
-        # Future implementation would look like:
-        # try:
-        #     from letter_monitoring_task import LetterMonitoringTask
-        #     self.letter_task = LetterMonitoringTask(
-        #         x_pos=x_pos, 
-        #         y_pos=y_pos,
-        #         participant_id=self.participant_id,
-        #         participant_folder_path=self.participant_folder_path
-        #     )
-        #     self.letter_task.show()
-        #     self.hide()
-        # except Exception as e:
-        #     self.handle_task_launch_error("Letter Monitoring Task", e)
-    
-    def launch_visual_search_task(self, x_pos, y_pos):
-        """Launch Visual Search Task (placeholder for future implementation)."""
-        print("Visual Search Task - Not yet implemented")
-        self.show_not_implemented_message("Visual Search Task")
-    
-    def launch_attention_network_task(self, x_pos, y_pos):
-        """Launch Attention Network Task (placeholder for future implementation)."""
-        print("Attention Network Task - Not yet implemented")
-        self.show_not_implemented_message("Attention Network Task")
-    
-    def launch_gonogo_task(self, x_pos, y_pos):
-        """Launch Go/No-Go Task (placeholder for future implementation)."""
-        print("Go/No-Go Task - Not yet implemented")
-        self.show_not_implemented_message("Go/No-Go Task")
-    
-    def launch_working_memory_task(self, x_pos, y_pos):
-        """Launch Working Memory Task (placeholder for future implementation)."""
-        print("Working Memory Task - Not yet implemented")
-        self.show_not_implemented_message("Working Memory Task")
+        self.show()  # Bring the selection menu window back
     
     def show_not_implemented_message(self, task_name):
         """Show standardized message for not-yet-implemented tasks."""

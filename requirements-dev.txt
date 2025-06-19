@@ -25,3 +25,6 @@ py2app>=0.28.0      # macOS (install only on macOS)
 # black>=22.0.0     # Code formatter
 # flake8>=4.0.0     # Linting
 # pytest>=7.0.0     # Testing
+
+# System monitoring
+psutil>=5.9.0
