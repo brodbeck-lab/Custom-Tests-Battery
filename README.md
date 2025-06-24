@@ -24,7 +24,7 @@ A comprehensive psychological testing suite for cognitive assessment and researc
 - 🚧 **Visual Search Task** - Spatial attention assessment (planned)
 - 🚧 **Attention Network Task** - Executive attention evaluation (planned)
 - 🚧 **Go/No-Go Task** - Response inhibition testing (planned)
-- 🚧 **Working Memory Task** - Memory capacity assessment (planned)
+- 🚧 **Reading Span Test** - Memory capacity assessment (planned)
 
 ## 📋 Requirements
 

@@ -878,7 +878,7 @@ class BiodataMenu(QMainWindow):
                     "Visual Search Task",
                     "Attention Network Task",
                     "Go/No-Go Task",
-                    "Working Memory Task"
+                    "Reading Span Test"
                 ]
                 session_manager.set_task_queue(default_tasks)
                 

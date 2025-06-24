@@ -698,14 +698,14 @@ def save_gonogo_data(trial_data, participant_id, data_folder_path,
 def save_working_memory_data(trial_data, participant_id, data_folder_path, 
                             emergency_save=False, **kwargs):
     """
-    Save Working Memory task data with crash recovery support.
+    Save Reading Span Test data with crash recovery support.
     
     ENHANCED PLACEHOLDER FUNCTION - Ready for implementation
     
     Parameters:
     -----------
     trial_data : list of dict
-        Trial records specific to Working Memory task
+        Trial records specific to Reading Span Test
     participant_id : str
         Unique identifier for the participant
     data_folder_path : str

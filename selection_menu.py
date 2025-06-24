@@ -13,7 +13,7 @@ from crash_recovery_system.session_manager import get_session_manager, initializ
 from crash_recovery_system.task_state_saver import get_recovery_info, CrashDetector
 import crash_recovery_system.crash_handler as crash_handler  # Initialize crash handler
 
-# Import Working Memory Task
+# Import Letter Monitoring Task
 from letter_monitoring_task.cvcDialog import CvcDialog
 from letter_monitoring_task.sgGetReadyDialog import CvcGetReadyDialog
 from letter_monitoring_task.cvcTest import CvcTestWidget
@@ -178,7 +178,7 @@ class SelectionMenu(QMainWindow):
             "Visual Search Task",
             "Attention Network Task",
             "Go/No-Go Task",
-            "Working Memory Task"
+            "Reading Span Test"
         ]
         
         # Create the six buttons
@@ -535,8 +535,8 @@ class SelectionMenu(QMainWindow):
         elif clean_test_name == "Go/No-Go Task":
             self.launch_gonogo_task(x_pos, y_pos)
             
-        elif clean_test_name == "Working Memory Task":
-            self.launch_working_memory_task(x_pos, y_pos)
+        elif clean_test_name == "Reading Span Test":
+            self.launch_reading_span_test(x_pos, y_pos)
         
         else:
             print(f"Unknown test: {clean_test_name}")
@@ -588,7 +588,7 @@ class SelectionMenu(QMainWindow):
                                f"Please try again or contact support if the problem persists.")
     
     def launch_letter_monitoring_task(self, x_pos, y_pos):
-        """Launch Letter Monitoring Task (placeholder for future implementation)."""
+        """Launch Letter Monitoring Task."""
         try:
             # === Step 1: Show config dialog ===
             config_dialog = CvcDialog(monitors=1, parent=self)
@@ -635,14 +635,14 @@ class SelectionMenu(QMainWindow):
 
 
         except Exception as e:
-            print(f"Failed to launch Working Memory Task: {e}")
+            print(f"Failed to launch Letter Monitoring Task: {e}")
             import traceback
             traceback.print_exc()
-            QMessageBox.critical(self, "Error", f"Could not launch Working Memory Task.\n\n{e}")
+            QMessageBox.critical(self, "Error", f"Could not launch Letter Monitoring Task.\n\n{e}")
 
-    def handle_working_memory_result(self):
-        """Handle the end of the Working Memory Task."""
-        print("Working Memory Task completed.")
+    def handle_letter_monitoring_result(self):
+        """Handle the end of the Letter Monitoring Task."""
+        print("Letter Monitoring Task completed.")
 
         # Clean up test widget
         if hasattr(self, "cvc_test_widget"):
@@ -774,7 +774,7 @@ def main():
             "Visual Search Task",
             "Attention Network Task",
             "Go/No-Go Task",
-            "Working Memory Task"
+            "Reading Span Test"
         ]
         session_manager.set_task_queue(default_tasks)
         print("Session manager initialized for testing")
