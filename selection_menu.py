@@ -14,10 +14,15 @@ from crash_recovery_system.task_state_saver import get_recovery_info, CrashDetec
 import crash_recovery_system.crash_handler as crash_handler  # Initialize crash handler
 
 # Import Letter Monitoring Task
-from letter_monitoring_task.cvcDialog import CvcDialog
-from letter_monitoring_task.sgGetReadyDialog import CvcGetReadyDialog
-from letter_monitoring_task.cvcTest import CvcTestWidget
+from letter_monitoring_task.cvc_dialog import CvcDialog
+from letter_monitoring_task.get_ready_dialog import CvcGetReadyDialog
+from letter_monitoring_task.cvc_test import CvcTestWidget
 from letter_monitoring_task.cvc_utils import load_cvc_sequence
+
+# Import Reading Span Test
+from reading_span_test.get_ready_dialog import RSpanGetReadyDialog
+from reading_span_test.reading_span_widget import ReadingSpanWidget
+from reading_span_test.sentence_loader import load_sentences  
 
 class SelectionMenu(QMainWindow):
     def __init__(self, buttons_size=1.0, buttons_elevation=1.0, participant_id=None, participant_folder_path=None, recovery_mode=False):
@@ -621,7 +626,7 @@ class SelectionMenu(QMainWindow):
             # self.hide()
 
             # === Step 4: Launch task INSIDE this window ===
-            self.cvc_test_widget = CvcTestWidget(sequence, presentation_time=time_limit)
+            self.cvc_test_widget = CvcTestWidget(sequence, presentation_time=time_limit, participant_id=self.participant_id)
 
             # Remove the old central widget (which contains the menu)
             old_central = self.centralWidget()
@@ -630,8 +635,14 @@ class SelectionMenu(QMainWindow):
             # Set new test widget as central
             self.setCentralWidget(self.cvc_test_widget)
 
+            # Force it to receive input focus
+            self.cvc_test_widget.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+            self.cvc_test_widget.setFocus()
+            self.cvc_test_widget.activateWindow()
+            self.cvc_test_widget.raise_()
+
             # Connect result handler
-            self.cvc_test_widget.experiment_finished.connect(self.handle_working_memory_result)
+            self.cvc_test_widget.experiment_finished.connect(self.handle_letter_monitoring_result)
 
 
         except Exception as e:
@@ -662,7 +673,41 @@ class SelectionMenu(QMainWindow):
         )
         
         self.show()  # Bring the selection menu window back
-    
+
+    def launch_reading_span_test(self, x_pos, y_pos):
+        """Launch Reading Span Test with no scoring, no feedback, no result handler."""
+        try:
+            # Step 1: Show instruction dialog
+            get_ready = RSpanGetReadyDialog(x=x_pos, y=y_pos, parent=self)
+            if not get_ready.exec():
+                print("User canceled get ready dialog")
+                return
+
+            # Step 2: Load sentences
+            sentence_list = load_sentences()
+            if not sentence_list:
+                raise ValueError("No sentences available for the Reading Span Test.")
+
+            # Step 3: Launch the ReadingSpanWidget
+            self.reading_span_widget = ReadingSpanWidget(
+                sentences=sentence_list,
+                participant_id=self.participant_id,
+                participant_folder_path=self.participant_folder_path,
+                recovery_mode=self.recovery_mode,
+                parent=self
+            )
+
+            # Replace the selection menu with the test widget
+            old_central = self.centralWidget()
+            old_central.setParent(None)
+            self.setCentralWidget(self.reading_span_widget)
+
+        except Exception as e:
+            print(f"Failed to launch Reading Span Test: {e}")
+            import traceback
+            traceback.print_exc()
+            QMessageBox.critical(self, "Error", f"Could not launch Reading Span Test.\n\n{e}")
+
     def show_not_implemented_message(self, task_name):
         """Show standardized message for not-yet-implemented tasks."""
         msg = QMessageBox()

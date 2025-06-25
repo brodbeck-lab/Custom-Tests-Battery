@@ -1,3 +1,18 @@
+"""
+CVC DIALOG MODULE
+
+Defines `CvcDialog`, a PyQt-based input dialog to collect user configuration
+before starting the CVC task.
+
+Collected parameters:
+- Presentation time per letter (ms)
+- List ID (from sequence file)
+- Number of stimuli to present
+- Monitor selection (if multiple)
+
+Values are validated before launching the task.
+"""
+
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
     QComboBox, QMessageBox

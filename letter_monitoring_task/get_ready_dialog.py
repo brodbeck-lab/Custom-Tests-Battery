@@ -1,3 +1,13 @@
+"""
+GET READY MODULE
+
+Defines `CvcGetReadyDialog`, a PyQt instruction dialog shown before the CVC test.
+The dialog presents multi-line instructions with examples (including colored text)
+to explain how the task works.
+
+Participants click OK to proceed to the actual task.
+"""
+
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QPushButton, QTextEdit, QHBoxLayout
 )
@@ -40,7 +50,7 @@ class CvcGetReadyDialog(QDialog):
             cursor.movePosition(QTextCursor.MoveOperation.End)
             cursor.insertText(text + "\n", fmt)
 
-        # Now populate the text just like the original sg version
+        # Populate the instruction text 
         append_line("Consonant Vowel Consonant Test\n", "black")
         append_line("The letters will appear ONE LETTER AT A TIME as consonant - vowel - consonant - vowel...")
         append_line("Your task is to identify each time 3 letters make up a known 3 letter (consonant-vowel-consonant [CVC]) word, for example P-E-N. Press the space bar or click the left mouse button to identify a word.")
