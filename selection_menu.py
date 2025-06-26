@@ -684,13 +684,13 @@ class SelectionMenu(QMainWindow):
                 return
 
             # Step 2: Load sentences
-            sentence_list = load_sentences()
-            if not sentence_list:
-                raise ValueError("No sentences available for the Reading Span Test.")
+            # sentence_list = load_sentences()
+            # if not sentence_list:
+            #     raise ValueError("No sentences available for the Reading Span Test.")
 
             # Step 3: Launch the ReadingSpanWidget
             self.reading_span_widget = ReadingSpanWidget(
-                sentences=sentence_list,
+                # sentences=sentence_list,
                 participant_id=self.participant_id,
                 participant_folder_path=self.participant_folder_path,
                 recovery_mode=self.recovery_mode,
@@ -702,11 +702,29 @@ class SelectionMenu(QMainWindow):
             old_central.setParent(None)
             self.setCentralWidget(self.reading_span_widget)
 
+            # Connect the test_completed signal
+            self.reading_span_widget.test_completed.connect(self.handle_reading_span_result)
+
         except Exception as e:
             print(f"Failed to launch Reading Span Test: {e}")
             import traceback
             traceback.print_exc()
             QMessageBox.critical(self, "Error", f"Could not launch Reading Span Test.\n\n{e}")
+
+    def handle_reading_span_result(self):
+        """Handle the end of the Reading Span Test."""
+        print("Reading Span Test completed.")
+
+        # === Restore original SelectionMenu layout ===
+        self.__init__(
+            buttons_size=1.0,
+            buttons_elevation=1.0,
+            participant_id=self.participant_id,
+            participant_folder_path=self.participant_folder_path,
+            recovery_mode=self.recovery_mode
+        )
+        
+        self.show()  # Bring the selection menu window back
 
     def show_not_implemented_message(self, task_name):
         """Show standardized message for not-yet-implemented tasks."""
