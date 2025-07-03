@@ -52,13 +52,12 @@ class ReadingSpanWidget(QWidget):
         self.activateWindow()
 
         # Start first sentence
-        self.stimulus_onset_time = time.perf_counter()
+        # self.stimulus_onset_time = time.perf_counter()
         QTimer.singleShot(100, self.show_sentence)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Space:
             self.key_pressed = True
-            self.response_time = time.perf_counter()
             if self.state == "sentence" and self.sentence_active:
                 self.sentence_timer.stop()
                 self.advance_sentence()
@@ -95,6 +94,7 @@ class ReadingSpanWidget(QWidget):
             self.label.setText(sentence.encode("utf-8").decode("unicode_escape"))
             if not sentence.startswith("The start of the experiment:"):
                 self.sentence_timer.start(self.presentation_time)  # 6.5 seconds
+                self.stimulus_onset_time = time.perf_counter()
                 self.log_state = "sentence " + sentence
             else:
                 self.log_state = "instruction 2"
@@ -114,6 +114,7 @@ class ReadingSpanWidget(QWidget):
 
     def show_recall(self):
         """Display the RECALL screen and advance to the next block after spacebar."""
+        self.stimulus_onset_time = time.perf_counter()
         self.label.setText("RECALL\n\nSay aloud the last word of each sentence in any order.")
         self.sentence_index = 0
         self.block_index += 1
@@ -138,7 +139,7 @@ class ReadingSpanWidget(QWidget):
 
     def finish_experiment(self):
         """Write to log file"""
-        self.label.setText("Done!")
+        # self.label.setText("Done!")
 
         # === Step 1: Build save directory
         save_dir = os.path.expanduser("./")
