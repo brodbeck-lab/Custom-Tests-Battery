@@ -647,8 +647,54 @@ class SelectionMenu(QMainWindow):
         self.show_not_implemented_message("Go/No-Go Task")
     
     def launch_reading_span_test(self, x_pos, y_pos):
-        """Launch Reading Span Test (placeholder)."""
-        self.show_not_implemented_message("Reading Span Test")
+        """Launch Reading Span Test."""
+        from reading_span_test.get_ready_dialog import RSpanGetReadyDialog
+        from reading_span_test.reading_span_widget import ReadingSpanWidget
+        from reading_span_test.sentence_loader import load_sentences 
+        try:
+            # Step 1: Show instruction dialog
+            get_ready = RSpanGetReadyDialog(x=x_pos, y=y_pos, parent=self)
+            if not get_ready.exec():
+                print("User canceled get ready dialog")
+                return
+
+            # Step 2: Launch the ReadingSpanWidget
+            self.reading_span_widget = ReadingSpanWidget(
+                # sentences=sentence_list,
+                participant_id=self.participant_id,
+                participant_folder_path=self.participant_folder_path,
+                recovery_mode=self.recovery_mode,
+                parent=self
+            )
+
+            # Replace the selection menu with the test widget
+            old_central = self.centralWidget()
+            old_central.setParent(None)
+            self.setCentralWidget(self.reading_span_widget)
+
+            # Connect the test_completed signal
+            self.reading_span_widget.test_completed.connect(self.handle_reading_span_result)
+
+        except Exception as e:
+            print(f"Failed to launch Reading Span Test: {e}")
+            import traceback
+            traceback.print_exc()
+            QMessageBox.critical(self, "Error", f"Could not launch Reading Span Test.\n\n{e}")
+
+    def handle_reading_span_result(self):
+        """Handle the end of the Reading Span Test."""
+        print("Reading Span Test completed.")
+
+        # === Restore original SelectionMenu layout ===
+        self.__init__(
+            buttons_size=1.0,
+            buttons_elevation=1.0,
+            participant_id=self.participant_id,
+            participant_folder_path=self.participant_folder_path,
+            recovery_mode=self.recovery_mode
+        )
+        
+        self.show()  # Bring the selection menu window back
 
     def handle_reading_span_result(self):
         """Handle the end of the Reading Span Test."""
