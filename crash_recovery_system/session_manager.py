@@ -32,19 +32,12 @@ from PyQt6.QtGui import QFont
 class SessionManager(QObject):
     """
     Enhanced Session Manager with comprehensive crash recovery and completion handling.
-    Prevents false recovery prompts for completed tasks while maintaining full protection.
+    Updated to use organized folder structure with system/ folder.
     """
-    
-    # Signals for session events
-    session_started = pyqtSignal(str)  # participant_id
-    session_completed = pyqtSignal(str)  # participant_id
-    task_started = pyqtSignal(str)  # task_name
-    task_completed = pyqtSignal(str)  # task_name
-    recovery_needed = pyqtSignal(dict)  # recovery_info
     
     def __init__(self, participant_id: str, participant_folder_path: str):
         """
-        Initialize enhanced session manager.
+        Initialize enhanced session manager with organized folder structure.
         
         Parameters:
         -----------
@@ -57,6 +50,16 @@ class SessionManager(QObject):
         
         self.participant_id = participant_id
         self.participant_folder_path = participant_folder_path
+        
+        # Create system folder structure
+        self.system_folder_path = os.path.join(participant_folder_path, "system")
+        self.crash_reports_path = os.path.join(self.system_folder_path, "crash_reports")
+        self.emergency_saves_path = os.path.join(self.system_folder_path, "emergency_saves")
+        
+        # Ensure system folders exist
+        os.makedirs(self.system_folder_path, exist_ok=True)
+        os.makedirs(self.crash_reports_path, exist_ok=True)
+        os.makedirs(self.emergency_saves_path, exist_ok=True)
         
         # Session data structure
         self.session_data = {
@@ -73,10 +76,17 @@ class SessionManager(QObject):
             'recovery_count': 0,
             'last_save_time': None,
             'auto_save_enabled': True,
+            'folder_structure': {
+                'version': '2.0',
+                'biodata_folder': 'biodata/',
+                'system_folder': 'system/',
+                'organized_structure': True
+            },
             'session_metadata': {
                 'version': '2.0',
                 'enhanced_completion_handling': True,
-                'auto_cleanup_enabled': True
+                'auto_cleanup_enabled': True,
+                'organized_folders': True
             }
         }
         
@@ -90,17 +100,20 @@ class SessionManager(QObject):
         self.auto_save_timer = QTimer()
         self.auto_save_timer.timeout.connect(self.auto_save)
         
-        # Session file paths
-        self.session_file_path = os.path.join(participant_folder_path, "session_state.json")
-        self.recovery_file_path = os.path.join(participant_folder_path, "recovery_data.json")
-        self.backup_file_path = os.path.join(participant_folder_path, "session_backup.json")
+        # Session file paths - now in system folder
+        self.session_file_path = os.path.join(self.system_folder_path, "session_state.json")
+        self.recovery_file_path = os.path.join(self.system_folder_path, "recovery_data.json")
+        self.backup_file_path = os.path.join(self.system_folder_path, "session_backup.json")
         
-        print(f"=== SESSION MANAGER INITIALIZED ===")
+        print(f"=== SESSION MANAGER INITIALIZED (ORGANIZED STRUCTURE) ===")
         print(f"Participant: {participant_id}")
-        print(f"Folder: {participant_folder_path}")
+        print(f"Main Folder: {participant_folder_path}")
+        print(f"System Folder: {self.system_folder_path}")
+        print(f"Crash Reports: {self.crash_reports_path}")
+        print(f"Emergency Saves: {self.emergency_saves_path}")
         print(f"Enhanced completion handling: ENABLED")
-        print(f"Auto-cleanup: ENABLED")
-        print("===================================")
+        print(f"Organized folder structure: ENABLED")
+        print("========================================================")
         
         # Load existing session if present
         self.load_existing_session()
@@ -431,29 +444,29 @@ class SessionManager(QObject):
     def cleanup_completed_session_files(self):
         """
         Clean up session and recovery files for completed sessions.
-        This prevents false recovery prompts on next startup.
+        Updated to work with system folder structure.
         """
         try:
-            print("=== CLEANING UP COMPLETED SESSION FILES ===")
+            print("=== CLEANING UP COMPLETED SESSION FILES (ORGANIZED STRUCTURE) ===")
             
             files_to_remove = [
                 self.session_file_path,
                 self.recovery_file_path,
-                os.path.join(self.participant_folder_path, "app_heartbeat.txt"),
-                os.path.join(self.participant_folder_path, "app_heartbeat_metadata.json")
+                os.path.join(self.system_folder_path, "app_heartbeat.txt"),
+                os.path.join(self.system_folder_path, "app_heartbeat_metadata.json")
             ]
             
             for file_path in files_to_remove:
                 if os.path.exists(file_path):
                     try:
                         os.remove(file_path)
-                        print(f"Removed: {os.path.basename(file_path)}")
+                        print(f"Removed: system/{os.path.basename(file_path)}")
                     except Exception as e:
                         print(f"Error removing {os.path.basename(file_path)}: {e}")
             
             # Keep data files but remove recovery-specific files
             print("Session cleanup completed - no recovery prompts will appear on next startup")
-            print("Data files preserved, recovery files removed")
+            print("Data files preserved in biodata/ and task folders, recovery files removed from system/")
             
         except Exception as e:
             print(f"Error during session cleanup: {e}")
@@ -513,21 +526,22 @@ class SessionManager(QObject):
         print("Auto-save stopped")
     
     def emergency_save(self):
-        """Perform emergency save during crash."""
+        """Perform emergency save during crash with organized folder structure."""
         try:
-            print("=== EMERGENCY SAVE ===")
+            print("=== EMERGENCY SAVE (ORGANIZED STRUCTURE) ===")
             
             # Mark as crash detected
             self.session_data['crash_detected'] = True
             self.session_data['crash_time'] = datetime.now().isoformat()
             
-            # Save session state
+            # Save session state to system folder
             self.save_session_state()
             
-            # Create additional emergency backup
+            # Create additional emergency backup in emergency_saves folder
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             emergency_file = os.path.join(
-                self.participant_folder_path, 
-                f"EMERGENCY_SESSION_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                self.emergency_saves_path, 
+                f"EMERGENCY_SESSION_{timestamp}.json"
             )
             
             with open(emergency_file, 'w', encoding='utf-8') as f:
@@ -535,11 +549,13 @@ class SessionManager(QObject):
                     'emergency_save_time': datetime.now().isoformat(),
                     'participant_id': self.participant_id,
                     'session_data': self.session_data,
-                    'save_reason': 'Application crash detected'
+                    'save_reason': 'Application crash detected',
+                    'folder_structure': 'organized_v2',
+                    'system_folder': self.system_folder_path
                 }
                 json.dump(emergency_data, f, indent=2)
             
-            print(f"Emergency save completed: {os.path.basename(emergency_file)}")
+            print(f"Emergency save completed: system/emergency_saves/{os.path.basename(emergency_file)}")
             
         except Exception as e:
             print(f"Emergency save failed: {e}")
