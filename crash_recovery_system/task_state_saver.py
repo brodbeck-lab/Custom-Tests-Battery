@@ -506,7 +506,7 @@ class TaskStateMixin:
             print(f"Error in immediate save for {self.task_name}: {e}")
     
     def _emergency_save_critical_data(self):
-        """Emergency save for critical data only."""
+        """Emergency save for critical data only - FIXED to use organized structure."""
         if not self.critical_data_changed or not self.session_manager:
             return
         
@@ -518,23 +518,46 @@ class TaskStateMixin:
                 'critical_trial_count': len(getattr(self, 'trial_data', [])),
                 'current_position': getattr(self, 'current_index', 0),
                 'recovery_mode': self.recovery_mode,
-                'task_completed': self.task_completed
+                'task_completed': self.task_completed,
+                'folder_structure': 'organized_v2',
+                'save_location': 'system/emergency_saves/'
             }
             
-            # Save to emergency backup location
-            emergency_file = os.path.join(
-                self.session_manager.participant_folder_path,
-                f"emergency_{self.task_name.lower().replace(' ', '_')}.json"
-            )
+            # FIXED: Use organized folder structure for emergency saves
+            participant_folder = self.session_manager.participant_folder_path
+            emergency_saves_folder = os.path.join(participant_folder, "system", "emergency_saves")
+            
+            # Ensure the emergency saves folder exists
+            os.makedirs(emergency_saves_folder, exist_ok=True)
+            
+            # Create emergency file in the organized location
+            emergency_filename = f"emergency_{self.task_name.lower().replace(' ', '_')}.json"
+            emergency_file = os.path.join(emergency_saves_folder, emergency_filename)
             
             with open(emergency_file, 'w') as f:
                 json.dump(critical_state, f, indent=2)
             
             self.critical_data_changed = False
             print(f"Emergency save completed for {self.task_name}")
+            print(f"Location: system/emergency_saves/{emergency_filename}")
             
         except Exception as e:
             print(f"Emergency save failed for {self.task_name}: {e}")
+            # Fallback to old location if organized structure fails
+            try:
+                print("Attempting fallback emergency save to root folder...")
+                emergency_file = os.path.join(
+                    self.session_manager.participant_folder_path,
+                    f"emergency_{self.task_name.lower().replace(' ', '_')}_fallback.json"
+                )
+                
+                with open(emergency_file, 'w') as f:
+                    json.dump(critical_state, f, indent=2)
+                
+                print(f"Fallback emergency save completed: {os.path.basename(emergency_file)}")
+                
+            except Exception as fallback_error:
+                print(f"Fallback emergency save also failed: {fallback_error}")
     
     def _get_task_specific_state(self) -> Dict:
         """
@@ -577,17 +600,19 @@ class TaskStateMixin:
     
     def handle_crash_recovery(self):
         """
-        Handle application crash recovery for this task.
+        Handle application crash recovery for this task - FIXED for organized structure.
         This method should be called when the application detects a crash.
         """
         if self.session_manager:
             print(f"Handling crash recovery for {self.task_name}")
             
-            # Perform emergency save
+            # Perform emergency save using organized structure
             try:
+                # Use the updated emergency save method
                 self._emergency_save_critical_data()
                 self.session_manager.emergency_save()
                 print(f"Crash recovery completed for {self.task_name}")
+                print("Emergency files saved to system/emergency_saves/")
             except Exception as e:
                 print(f"Error during crash recovery for {self.task_name}: {e}")
         else:
@@ -652,21 +677,23 @@ class EnhancedCrashDetector(QObject):
         self.known_tasks = set()
         
         if session_manager:
-            heartbeat_path = os.path.join(
-                session_manager.participant_folder_path, 
-                "app_heartbeat.txt"
-            )
+            # Use organized folder structure for heartbeat files
+            system_folder = os.path.join(session_manager.participant_folder_path, "system")
+            os.makedirs(system_folder, exist_ok=True)
+            
+            heartbeat_path = os.path.join(system_folder, "app_heartbeat.txt")
             self.heartbeat_file = heartbeat_path
             
-            # Enhanced heartbeat file with metadata
-            self.heartbeat_metadata_file = heartbeat_path.replace('.txt', '_metadata.json')
+            # Enhanced heartbeat file with metadata in system folder
+            self.heartbeat_metadata_file = os.path.join(system_folder, "app_heartbeat_metadata.json")
         
-        print(f"=== ENHANCED CRASH DETECTOR INITIALIZED ===")
+        print(f"=== ENHANCED CRASH DETECTOR INITIALIZED (ORGANIZED) ===")
         print(f"Heartbeat interval: {self.heartbeat_interval}ms")
         print(f"Resource monitoring: {self.resource_monitor_interval}ms")
         print(f"Task monitoring: {self.task_monitor_interval}ms")
-        print(f"Memory thresholds: {self.memory_warning_threshold}% warning, {self.memory_critical_threshold}% critical")
-        print("=============================================")
+        print(f"Organized folder structure: ENABLED")
+        print(f"System folder heartbeat: {'YES' if self.heartbeat_file else 'NO'}")
+        print("=======================================================")
     
     def start_monitoring(self):
         """Start comprehensive monitoring system."""

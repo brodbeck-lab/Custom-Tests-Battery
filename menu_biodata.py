@@ -9,7 +9,7 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont
 
 # Import the selection menu
-from selection_menu import SelectionMenu
+from menu_selection import SelectionMenu
 
 # Import crash recovery system
 from crash_recovery_system.session_manager import initialize_session_manager, get_session_manager
@@ -262,7 +262,7 @@ class BiodataMenu(QMainWindow):
         # Define all fields with their types and options
         fields_data = [
             ("Participant ID", "text", None),
-            ("Date of Birth or Age", "text", None),
+            ("Date of Birth", "text", None),  # CHANGED from "Date of Birth or Age"
             ("Gender/Sex", "dropdown", ["Select Gender/Sex", "Male", "Female", "Other", "Prefer not to say"]),
             ("Handedness", "dropdown", ["Select Handedness", "Right-handed", "Left-handed", "Ambidextrous"]),
             ("Primary Language", "dropdown", ["Select Primary Language", "English", "Spanish", "French", "Mandarin", "Cantonese", "Hindi", "Arabic", "Russian", "Portuguese", "Bengali", "Other"]),
@@ -286,7 +286,7 @@ class BiodataMenu(QMainWindow):
         # Create widgets for each field
         row = 0
         col = 0
-        
+
         for field_name, field_type, options in fields_data:
             # Create container widget for each field
             field_container = QWidget()
@@ -315,7 +315,11 @@ class BiodataMenu(QMainWindow):
                 widget.lineEdit().setPlaceholderText("Enter ID or Select ID")
             elif field_type == "text":
                 widget = QLineEdit()
-                widget.setPlaceholderText(f"Enter {field_name.lower()}")
+                # UPDATED: Special placeholder for Date of Birth
+                if field_name == "Date of Birth":
+                    widget.setPlaceholderText("DD/MM/YYYY")
+                else:
+                    widget.setPlaceholderText(f"Enter {field_name.lower()}")
             elif field_type == "dropdown":
                 widget = QComboBox()
                 widget.addItems(options)
@@ -603,7 +607,7 @@ class BiodataMenu(QMainWindow):
         return True, ""
     
     def load_existing_participants(self):
-        """Load existing participant IDs from saved data files"""
+        """Load existing participant IDs from saved data files in biodata folders"""
         try:
             documents_path = os.path.expanduser("~/Documents")
             app_data_path = os.path.join(documents_path, "Custom Tests Battery Data")
@@ -617,17 +621,29 @@ class BiodataMenu(QMainWindow):
                 for folder_name in os.listdir(app_data_path):
                     folder_path = os.path.join(app_data_path, folder_name)
                     if os.path.isdir(folder_path):
-                        # Look for metadata_*.txt files in the folder
-                        metadata_files = glob.glob(os.path.join(folder_path, "metadata_*.txt"))
-                        if metadata_files:
-                            # Use the most recent metadata file if multiple exist
-                            latest_file = max(metadata_files, key=os.path.getmtime)
-                            
-                            # Folder name is the participant ID
-                            participant_id = folder_name
-                            self.existing_participants[participant_id] = latest_file
+                        # Look for biodata subfolder
+                        biodata_folder = os.path.join(folder_path, "biodata")
+                        if os.path.exists(biodata_folder):
+                            # Look for metadata_*.txt files in the biodata folder
+                            metadata_files = glob.glob(os.path.join(biodata_folder, "metadata_*.txt"))
+                            if metadata_files:
+                                # Use the most recent metadata file if multiple exist
+                                latest_file = max(metadata_files, key=os.path.getmtime)
+                                
+                                # Folder name is the participant ID
+                                participant_id = folder_name
+                                self.existing_participants[participant_id] = latest_file
+                                print(f"Found biodata for participant: {participant_id}")
+                        else:
+                            # Fallback: look for metadata files in root folder (legacy support)
+                            metadata_files = glob.glob(os.path.join(folder_path, "metadata_*.txt"))
+                            if metadata_files:
+                                latest_file = max(metadata_files, key=os.path.getmtime)
+                                participant_id = folder_name
+                                self.existing_participants[participant_id] = latest_file
+                                print(f"Found legacy biodata for participant: {participant_id} (will migrate to biodata folder on next save)")
             
-            print(f"Found {len(self.existing_participants)} existing participants")
+            print(f"Found {len(self.existing_participants)} existing participants with biodata")
             
         except Exception as e:
             print(f"Error loading existing participants: {str(e)}")
@@ -758,7 +774,7 @@ class BiodataMenu(QMainWindow):
         return now.strftime("%Y%m%d_%H%M%S")
     
     def create_data_folder_and_file(self, participant_id, biodata):
-        """Create folder (if needed) and save biodata to metadata file"""
+        """Create folder structure and save biodata to metadata file in biodata subfolder"""
         try:
             # Generate timestamp for filename
             timestamp = self.generate_filename_timestamp()
@@ -780,9 +796,30 @@ class BiodataMenu(QMainWindow):
             else:
                 print(f"Using existing participant folder: {participant_folder_path}")
             
-            # Create metadata filename: metadata_YYYYMMDD_HHMMSS.txt
+            # Create biodata subfolder for metadata files
+            biodata_folder_path = os.path.join(participant_folder_path, "biodata")
+            if not os.path.exists(biodata_folder_path):
+                os.makedirs(biodata_folder_path)
+                print(f"Created biodata folder: {biodata_folder_path}")
+            else:
+                print(f"Using existing biodata folder: {biodata_folder_path}")
+            
+            # Create system subfolder for session management, crash reports, emergency saves
+            system_folder_path = os.path.join(participant_folder_path, "system")
+            if not os.path.exists(system_folder_path):
+                os.makedirs(system_folder_path)
+                print(f"Created system folder: {system_folder_path}")
+            
+            # Create subfolders within system folder
+            crash_reports_path = os.path.join(system_folder_path, "crash_reports")
+            emergency_saves_path = os.path.join(system_folder_path, "emergency_saves")
+            os.makedirs(crash_reports_path, exist_ok=True)
+            os.makedirs(emergency_saves_path, exist_ok=True)
+            print(f"Created system subfolders: crash_reports, emergency_saves")
+            
+            # Create metadata filename: metadata_YYYYMMDD_HHMMSS.txt in biodata folder
             file_name = f"metadata_{timestamp}.txt"
-            file_path = os.path.join(participant_folder_path, file_name)
+            file_path = os.path.join(biodata_folder_path, file_name)
             
             # Write biodata to file in structured, readable format
             with open(file_path, 'w', encoding='utf-8') as file:
@@ -791,9 +828,21 @@ class BiodataMenu(QMainWindow):
                 file.write(f"Data Collection Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                 file.write(f"Storage Location: {app_data_path}\n")
                 file.write(f"Participant Folder: {participant_id}\n")
+                file.write(f"Biodata Folder: biodata/\n")
+                file.write(f"System Folder: system/\n")
                 file.write(f"Metadata File: {file_name}\n")
                 file.write(f"Crash Recovery: ENABLED\n")
                 file.write(f"Session Management: ACTIVE\n\n")
+                file.write("FOLDER STRUCTURE:\n")
+                file.write("-" * 20 + "\n")
+                file.write(f"├── biodata/\n")
+                file.write(f"│   └── metadata files\n")
+                file.write(f"├── system/\n")
+                file.write(f"│   ├── crash_reports/\n")
+                file.write(f"│   ├── emergency_saves/\n")
+                file.write(f"│   ├── session_state.json\n")
+                file.write(f"│   └── recovery_data.json\n")
+                file.write(f"└── task_data_folders/\n\n")
                 file.write("PARTICIPANT INFORMATION:\n")
                 file.write("-" * 30 + "\n\n")
                 
@@ -812,22 +861,23 @@ class BiodataMenu(QMainWindow):
                 
                 file.write("\n" + "=" * 50 + "\n")
                 file.write("End of Biodata Report\n")
-                file.write(f"\nGenerated by Custom Tests Battery v1.0\n")
+                file.write(f"\nGenerated by Custom Tests Battery v2.0\n")
                 file.write(f"Executable Location: {os.path.dirname(os.path.abspath(__file__))}\n")
                 
-            print(f"Metadata file created: {file_path}")
+            print(f"Metadata file created in biodata folder: {file_path}")
             
             # Verify the file was created and contains data
             if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-                print("File verification successful - data saved correctly")
-                print(f"Data saved to: {file_path}")
+                print("File verification successful - biodata saved correctly")
+                print(f"Biodata saved to: {file_path}")
+                print(f"Folder structure created with biodata/ and system/ subfolders")
                 return True, participant_folder_path, file_path
             else:
                 print("File verification failed")
                 return False, None, None
                 
         except Exception as e:
-            print(f"Error creating folder/file: {str(e)}")
+            print(f"Error creating folder/file structure: {str(e)}")
             print(f"Attempted path: {app_data_path if 'app_data_path' in locals() else 'Path not determined'}")
             return False, None, None
     

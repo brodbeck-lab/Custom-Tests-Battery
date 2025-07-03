@@ -288,10 +288,11 @@ class WelcomeWindow(QMainWindow):
         # Check for recoverable sessions after UI is set up
         QTimer.singleShot(500, self.check_for_recoverable_sessions)
     
+
     def check_for_recoverable_sessions(self):
         """
         Check if there are any recoverable sessions from previous crashes.
-        Enhanced to properly handle completed tasks and avoid false recovery prompts.
+        Updated to handle organized folder structure (biodata/, system/).
         """
         try:
             documents_path = os.path.expanduser("~/Documents")
@@ -301,17 +302,29 @@ class WelcomeWindow(QMainWindow):
                 print("No application data directory found")
                 return
             
-            print(f"Checking for recoverable sessions in: {app_data_path}")
+            print(f"Checking for recoverable sessions in organized structure: {app_data_path}")
             
             recoverable_sessions = []
             
-            # Look for session files in participant folders
+            # Look for session files in participant system folders
             for participant_folder in os.listdir(app_data_path):
                 folder_path = os.path.join(app_data_path, participant_folder)
                 if not os.path.isdir(folder_path):
                     continue
                 
-                session_file = os.path.join(folder_path, "session_state.json")
+                # Check for organized structure first (system/session_state.json)
+                system_folder = os.path.join(folder_path, "system")
+                session_file = None
+                
+                if os.path.exists(system_folder):
+                    # New organized structure
+                    session_file = os.path.join(system_folder, "session_state.json")
+                    print(f"Checking organized structure for {participant_folder}: system/")
+                else:
+                    # Legacy structure (session_state.json in root)
+                    session_file = os.path.join(folder_path, "session_state.json")
+                    print(f"Checking legacy structure for {participant_folder}: root/")
+                
                 if not os.path.exists(session_file):
                     continue
                 
@@ -331,7 +344,7 @@ class WelcomeWindow(QMainWindow):
                                 if time_diff.total_seconds() < 86400:  # 24 hours
                                     current_task = session_data.get('current_task', '')
                                     
-                                    # NEW: Check if current task is actually incomplete
+                                    # Check if current task is actually incomplete
                                     needs_recovery = self.check_if_recovery_needed(session_data, current_task)
                                     
                                     if needs_recovery:
@@ -343,6 +356,9 @@ class WelcomeWindow(QMainWindow):
                                             trial_data = current_task_state.get('trial_data', [])
                                             trials_completed = len(trial_data)
                                         
+                                        # Determine structure type
+                                        structure_type = "organized" if os.path.exists(system_folder) else "legacy"
+                                        
                                         recoverable_sessions.append({
                                             'participant_id': participant_folder,
                                             'session_file': session_file,
@@ -350,14 +366,15 @@ class WelcomeWindow(QMainWindow):
                                             'last_save': last_save_str,
                                             'current_task': current_task,
                                             'trials_completed': trials_completed,
-                                            'session_data': session_data
+                                            'session_data': session_data,
+                                            'structure_type': structure_type
                                         })
                                         
-                                        print(f"Found recoverable session: {participant_folder} - {current_task} ({trials_completed} trials)")
+                                        print(f"Found recoverable session: {participant_folder} - {current_task} ({trials_completed} trials) [{structure_type}]")
                                     else:
                                         print(f"Session found but no recovery needed: {participant_folder} - task completed")
                                         # Clean up completed session
-                                        self.cleanup_completed_session(session_file, folder_path)
+                                        self.cleanup_completed_session(session_file, folder_path, structure_type)
                             except ValueError:
                                 print(f"Invalid date format in session file: {session_file}")
                             
@@ -492,38 +509,49 @@ class WelcomeWindow(QMainWindow):
             print(f"Error checking task completion: {e}")
             return False
     
-    def cleanup_completed_session(self, session_file, folder_path):
+    def cleanup_completed_session(self, session_file, folder_path, structure_type="organized"):
         """
         Clean up session files for completed tasks to prevent false recovery offers.
+        Updated to handle both organized and legacy folder structures.
         """
         try:
-            print(f"Cleaning up completed session files in: {folder_path}")
+            print(f"Cleaning up completed session files in: {folder_path} [{structure_type}]")
             
-            # Remove session state file
-            if os.path.exists(session_file):
-                os.remove(session_file)
-                print(f"Removed session state file: {os.path.basename(session_file)}")
-            
-            # Remove recovery data file if it exists
-            recovery_file = os.path.join(folder_path, "recovery_data.json")
-            if os.path.exists(recovery_file):
-                os.remove(recovery_file)
-                print(f"Removed recovery data file: {os.path.basename(recovery_file)}")
-            
-            # Remove heartbeat file if it exists
-            heartbeat_file = os.path.join(folder_path, "app_heartbeat.txt")
-            if os.path.exists(heartbeat_file):
-                os.remove(heartbeat_file)
-                print(f"Removed heartbeat file: {os.path.basename(heartbeat_file)}")
-            
-            # Remove heartbeat metadata file if it exists
-            heartbeat_metadata_file = os.path.join(folder_path, "app_heartbeat_metadata.json")
-            if os.path.exists(heartbeat_metadata_file):
-                os.remove(heartbeat_metadata_file)
-                print(f"Removed heartbeat metadata file: {os.path.basename(heartbeat_metadata_file)}")
-            
-            # Keep the actual data files (metadata, experiment results) but remove recovery files
-            print("Completed session cleanup - data files preserved, recovery files removed")
+            if structure_type == "organized":
+                # Organized structure: files are in system/ folder
+                system_folder = os.path.join(folder_path, "system")
+                
+                files_to_remove = [
+                    os.path.join(system_folder, "session_state.json"),
+                    os.path.join(system_folder, "recovery_data.json"),
+                    os.path.join(system_folder, "app_heartbeat.txt"),
+                    os.path.join(system_folder, "app_heartbeat_metadata.json")            
+                ]
+                
+                for file_path in files_to_remove:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                        print(f"Removed: system/{os.path.basename(file_path)}")
+                
+                print("Completed session cleanup - organized structure")
+                print("Data files preserved in biodata/ and task folders, recovery files removed from system/")
+                
+            else:
+                # Legacy structure: files are in root folder
+                files_to_remove = [
+                    session_file,
+                    os.path.join(folder_path, "recovery_data.json"),
+                    os.path.join(folder_path, "app_heartbeat.txt"),
+                    os.path.join(folder_path, "app_heartbeat_metadata.json")
+                ]
+                
+                for file_path in files_to_remove:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                        print(f"Removed: {os.path.basename(file_path)}")
+                
+                print("Completed session cleanup - legacy structure")
+                print("Data files preserved, recovery files removed")
             
         except Exception as e:
             print(f"Error during session cleanup: {e}")
@@ -623,7 +651,7 @@ class WelcomeWindow(QMainWindow):
             print(f"Session manager initialized for recovery: {participant_id}")
             
             # Go directly to selection menu with recovery
-            from selection_menu import SelectionMenu
+            from menu_selection import SelectionMenu
             current_geometry = self.geometry()
             
             self.selection_menu = SelectionMenu(
@@ -732,7 +760,7 @@ def main():
     # next_button_elevation: Controls how much the neumorphic next button stands out (default: 1.0, use 2.0 for more raised, 0.5 for subtle)
     
     # Create and show the welcome window
-    # When Next is clicked, it will load the biodata menu, then the selection menu
+    # When Next is clicked, it will load the biodata menu, then the sel ection menu
     window = WelcomeWindow(title_font_size=56, description_font_size=36, next_button_size=1.0, next_button_elevation=0.5)
     
     window.show()

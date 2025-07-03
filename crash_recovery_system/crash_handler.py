@@ -17,7 +17,7 @@ Features:
 - Graceful degradation mechanisms
 
 Author: Custom Tests Battery Development Team
-Version: 2.0 (Enhanced Crash Recovery)
+Version: 2.0 (Enhanced Crash Recovery - Updated for Modular Data Savers)
 """
 
 import sys
@@ -35,7 +35,15 @@ from typing import Dict, List, Any, Optional, Callable
 # Import crash recovery system components
 try:
     from crash_recovery_system.session_manager import get_session_manager, cleanup_session_manager
-    from experiment_data_saver import emergency_save_all_tasks
+    # Import task-specific emergency save functions from the new data_saver modules
+    from task_cvc.data_saver import emergency_save_cvc_task
+    from task_stroop_colorword.data_saver import emergency_save_stroop_task
+    # TODO: Add other task emergency save imports as you create more data_saver.py files:
+    # from letter_monitoring_task.data_saver import emergency_save_letter_monitoring_task
+    # from visual_search_task.data_saver import emergency_save_visual_search_task
+    # from attention_network_task.data_saver import emergency_save_attention_network_task
+    # from gonogo_task.data_saver import emergency_save_gonogo_task
+    # from reading_span_task.data_saver import emergency_save_reading_span_task
     RECOVERY_SYSTEM_AVAILABLE = True
 except ImportError:
     RECOVERY_SYSTEM_AVAILABLE = False
@@ -285,71 +293,74 @@ class CrashHandler:
     def _perform_emergency_save(self, crash_reason):
         """
         Perform emergency save of all critical data.
-        
-        Parameters:
-        -----------
-        crash_reason : str
-            Reason for the emergency save
-        
-        Returns:
-        --------
-        bool
-            True if emergency save was successful
+        Updated to use task-specific data savers.
         """
-        print(f"PERFORMING EMERGENCY SAVE - Reason: {crash_reason}")
+        if not self.emergency_save_enabled:
+            print("Emergency save disabled - skipping")
+            return False
+        
+        print(f"=== PERFORMING EMERGENCY SAVE ===")
+        print(f"Reason: {crash_reason}")
+        print(f"Max save time: {self.max_emergency_save_time} seconds")
+        
+        emergency_save_success = False
+        
+        # Set timeout for emergency save
+        save_start_time = time.time()
         
         try:
-            # Set timeout for emergency save
-            emergency_save_success = False
-            
             if RECOVERY_SYSTEM_AVAILABLE:
+                # Use the modular emergency save system
                 session_manager = get_session_manager()
                 if session_manager:
-                    print("Session manager found - performing comprehensive emergency save")
-                    
-                    # Mark as crash in session data
-                    session_manager.session_data['crash_detected'] = True
-                    session_manager.session_data['crash_reason'] = crash_reason
-                    session_manager.session_data['crash_time'] = datetime.now().isoformat()
-                    
-                    # Perform emergency save
-                    session_manager.emergency_save()
-                    
-                    # Save all task data
                     emergency_save_success = emergency_save_all_tasks(session_manager)
-                    
-                    print("Comprehensive emergency save completed")
                 else:
-                    print("No active session manager - limited emergency save")
-                    emergency_save_success = True  # No data to save
+                    print("No session manager available - creating basic emergency save")
+                    emergency_save_success = self._basic_emergency_save(crash_reason)
             else:
-                print("Recovery system not available - basic emergency save")
+                print("Recovery system not available - creating basic emergency save")
                 emergency_save_success = self._basic_emergency_save(crash_reason)
             
-            return emergency_save_success
+            save_duration = time.time() - save_start_time
+            print(f"Emergency save completed in {save_duration:.2f} seconds")
             
         except Exception as e:
-            print(f"CRITICAL: Emergency save failed: {e}")
-            return False
+            save_duration = time.time() - save_start_time
+            print(f"Emergency save failed after {save_duration:.2f} seconds: {e}")
+            
+            # Last resort save
+            try:
+                emergency_save_success = self._basic_emergency_save(crash_reason)
+            except Exception as final_error:
+                print(f"Final emergency save attempt failed: {final_error}")
+        
+        return emergency_save_success
     
     def _basic_emergency_save(self, crash_reason):
         """
-        Basic emergency save when recovery system is not available.
-        
-        Parameters:
-        -----------
-        crash_reason : str
-            Reason for the emergency save
-        
-        Returns:
-        --------
-        bool
-            True if basic emergency save was successful
+        Create basic emergency save when full recovery system is not available.
+        Fixed to use participant-specific system folder.
         """
         try:
-            # Create emergency save in Documents folder
-            documents_path = os.path.expanduser("~/Documents")
-            emergency_folder = os.path.join(documents_path, "Custom Tests Battery Data", "EMERGENCY_SAVES")
+            # Get session manager to find participant folder
+            session_manager = get_session_manager() if SESSION_MANAGER_AVAILABLE else None
+            
+            if session_manager and hasattr(session_manager, 'participant_folder_path'):
+                # Use participant-specific system folder
+                participant_folder = session_manager.participant_folder_path
+                emergency_folder = os.path.join(participant_folder, "system", "emergency_saves")
+                participant_id = session_manager.participant_id
+            else:
+                # Fallback: try to determine participant from current working directory or use generic
+                documents_path = os.path.expanduser("~/Documents")
+                app_data_path = os.path.join(documents_path, "Custom Tests Battery Data")
+                
+                # Create a generic emergency participant folder if no session manager
+                participant_id = f"EMERGENCY_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                participant_folder = os.path.join(app_data_path, participant_id)
+                emergency_folder = os.path.join(participant_folder, "system", "emergency_saves")
+            
+            # Ensure the emergency folder exists
             os.makedirs(emergency_folder, exist_ok=True)
             
             # Create basic emergency save file
@@ -362,11 +373,12 @@ class CrashHandler:
                 f.write(f"Emergency save time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                 f.write(f"Crash reason: {crash_reason}\n")
                 f.write(f"Process ID: {os.getpid()}\n")
-                f.write(f"Recovery system: NOT AVAILABLE\n")
-                f.write("\nThis is a basic emergency save created when the full recovery system was not available.\n")
-                f.write("Data may be limited. Check for session files in participant folders.\n")
+                f.write(f"Participant ID: {participant_id}\n")
+                f.write(f"Recovery system: {'AVAILABLE' if SESSION_MANAGER_AVAILABLE else 'NOT AVAILABLE'}\n")
+                f.write(f"Folder structure: ORGANIZED (participant/system/emergency_saves/)\n")
+                f.write("\nThis emergency save is participant-specific and stored in the correct location.\n")
             
-            print(f"Basic emergency save created: {emergency_file}")
+            print(f"Basic emergency save created for participant {participant_id}: {emergency_file}")
             return True
             
         except Exception as e:
@@ -376,135 +388,38 @@ class CrashHandler:
     def _generate_crash_report(self, crash_info):
         """
         Generate detailed crash report for debugging and analysis.
-        
-        Parameters:
-        -----------
-        crash_info : dict
-            Crash information dictionary
-        
-        Returns:
-        --------
-        bool
-            True if crash report was generated successfully
+        Updated to use organized folder structure.
         """
         try:
-            # Determine crash report location
-            crash_report_folder = self._get_crash_report_folder()
+            # Create crash reports folder in organized structure
+            documents_path = os.path.expanduser("~/Documents")
+            crash_reports_folder = os.path.join(documents_path, "Custom Tests Battery Data", "system", "crash_reports")
+            os.makedirs(crash_reports_folder, exist_ok=True)
             
-            if not crash_report_folder:
-                print("Could not determine crash report folder")
-                return False
-            
-            # Create crash report filename
+            # Generate crash report file
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            crash_report_file = os.path.join(crash_report_folder, f"crash_report_{timestamp}.json")
+            report_file = os.path.join(crash_reports_folder, f"CRASH_REPORT_{timestamp}.json")
             
-            # Add additional debugging information
-            crash_info['crash_report_file'] = crash_report_file
-            crash_info['crash_report_generation_time'] = datetime.now().isoformat()
-            
-            # Write comprehensive crash report
-            with open(crash_report_file, 'w', encoding='utf-8') as f:
+            with open(report_file, 'w', encoding='utf-8') as f:
                 json.dump(crash_info, f, indent=2, default=str)
             
-            # Also create human-readable version
-            readable_report_file = crash_report_file.replace('.json', '.txt')
-            with open(readable_report_file, 'w', encoding='utf-8') as f:
-                f.write("CUSTOM TESTS BATTERY - CRASH REPORT\n")
-                f.write("=" * 50 + "\n\n")
-                
-                f.write("CRASH SUMMARY:\n")
-                f.write("-" * 15 + "\n")
-                f.write(f"Time: {crash_info['timestamp']}\n")
-                f.write(f"Exception: {crash_info['exception_type']}\n")
-                f.write(f"Message: {crash_info['exception_message']}\n")
-                f.write(f"Process ID: {crash_info['process_id']}\n")
-                f.write(f"Crash Count: {crash_info['crash_count']}\n\n")
-                
-                f.write("SYSTEM INFORMATION:\n")
-                f.write("-" * 20 + "\n")
-                f.write(f"Platform: {crash_info.get('platform', 'Unknown')}\n")
-                f.write(f"Python Version: {crash_info.get('python_version', 'Unknown')}\n")
-                f.write(f"Memory Usage: {crash_info.get('memory_usage', 'Unknown')} MB\n")
-                f.write(f"CPU Usage: {crash_info.get('cpu_percent', 'Unknown')}%\n")
-                f.write(f"Working Directory: {crash_info.get('working_directory', 'Unknown')}\n\n")
-                
-                if 'participant_id' in crash_info:
-                    f.write("SESSION INFORMATION:\n")
-                    f.write("-" * 20 + "\n")
-                    f.write(f"Participant: {crash_info['participant_id']}\n")
-                    f.write(f"Current Task: {crash_info.get('current_task', 'None')}\n")
-                    f.write(f"Trials Completed: {crash_info.get('trials_completed', 0)}\n")
-                    f.write(f"Session Start: {crash_info.get('session_start_time', 'Unknown')}\n\n")
-                
-                f.write("STACK TRACE:\n")
-                f.write("-" * 12 + "\n")
-                f.write(crash_info.get('traceback', 'No traceback available'))
-                f.write("\n\nEnd of Crash Report\n")
-            
-            print(f"Crash report generated:")
-            print(f"  - JSON format: {os.path.basename(crash_report_file)}")
-            print(f"  - Text format: {os.path.basename(readable_report_file)}")
-            
+            print(f"Crash report generated: system/crash_reports/{os.path.basename(report_file)}")
             return True
             
         except Exception as e:
-            print(f"Failed to generate crash report: {e}")
+            print(f"Could not generate crash report: {e}")
             return False
     
-    def _get_crash_report_folder(self):
-        """Get the appropriate folder for crash reports."""
-        try:
-            # Try to use participant folder if available
-            if RECOVERY_SYSTEM_AVAILABLE:
-                session_manager = get_session_manager()
-                if session_manager and hasattr(session_manager, 'participant_folder_path'):
-                    crash_folder = os.path.join(session_manager.participant_folder_path, "crash_reports")
-                    os.makedirs(crash_folder, exist_ok=True)
-                    return crash_folder
-            
-            # Fallback to Documents folder
-            documents_path = os.path.expanduser("~/Documents")
-            crash_folder = os.path.join(documents_path, "Custom Tests Battery Data", "crash_reports")
-            os.makedirs(crash_folder, exist_ok=True)
-            return crash_folder
-            
-        except Exception as e:
-            print(f"Error creating crash report folder: {e}")
-            return None
-    
-    def _last_resort_save(self, crash_info):
-        """Last resort save when all other mechanisms fail."""
-        try:
-            # Try to save to current directory as last resort
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            last_resort_file = f"LAST_RESORT_CRASH_SAVE_{timestamp}.txt"
-            
-            with open(last_resort_file, 'w', encoding='utf-8') as f:
-                f.write("LAST RESORT CRASH SAVE\n")
-                f.write("=" * 25 + "\n\n")
-                f.write(f"All crash recovery mechanisms failed.\n")
-                f.write(f"This is a minimal save attempt.\n\n")
-                f.write(f"Crash time: {crash_info['timestamp']}\n")
-                f.write(f"Exception: {crash_info['exception_type']}\n")
-                f.write(f"Message: {crash_info['exception_message']}\n")
-                f.write(f"Process ID: {crash_info['process_id']}\n")
-            
-            print(f"Last resort save created: {last_resort_file}")
-            
-        except Exception as e:
-            print(f"CRITICAL: Last resort save failed: {e}")
-    
     def _notify_crash_callbacks(self, crash_info):
-        """Notify registered crash callbacks."""
+        """Notify all registered crash callbacks."""
         for callback in self.crash_callbacks:
             try:
                 callback(crash_info)
             except Exception as e:
-                print(f"Crash callback failed: {e}")
+                print(f"Error in crash callback {callback.__name__}: {e}")
     
     def _cleanup_resources(self):
-        """Clean up application resources."""
+        """Clean up system resources and session managers."""
         try:
             # Stop monitoring
             self.stop_monitoring()
@@ -520,53 +435,74 @@ class CrashHandler:
     
     def _cleanup_on_exit(self):
         """Cleanup function called on normal exit."""
-        if not self.crash_detected:
-            print("Application exiting normally - performing cleanup")
+        if self.monitoring_active:
             self.stop_monitoring()
+    
+    def _last_resort_save(self, crash_info):
+        """Absolute last resort save when everything else fails."""
+        try:
+            # Try to save to current directory as last resort
+            emergency_file = f"LAST_RESORT_SAVE_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
             
-            # Normal shutdown - no emergency save needed
-            if RECOVERY_SYSTEM_AVAILABLE:
-                session_manager = get_session_manager()
-                if session_manager:
-                    session_manager._cleanup_session()
+            with open(emergency_file, 'w', encoding='utf-8') as f:
+                f.write("LAST RESORT EMERGENCY SAVE\n")
+                f.write("=" * 30 + "\n")
+                f.write(f"Time: {datetime.now().isoformat()}\n")
+                f.write(f"Exception: {crash_info.get('exception_type', 'Unknown')}\n")
+                f.write(f"Message: {crash_info.get('exception_message', 'Unknown')}\n")
+                f.write(f"PID: {crash_info.get('process_id', 'Unknown')}\n")
+            
+            print(f"Last resort save created: {emergency_file}")
+            
+        except:
+            print("CRITICAL: All save mechanisms failed")
     
     def start_monitoring(self):
         """Start resource monitoring in background thread."""
-        if not self.enable_monitoring or self.monitoring_active:
+        if self.monitoring_active:
             return
         
         self.monitoring_active = True
-        self.monitoring_thread = threading.Thread(target=self._monitoring_loop, daemon=True)
+        self.monitoring_thread = threading.Thread(target=self._monitor_resources, daemon=True)
         self.monitoring_thread.start()
         print("Resource monitoring started")
     
     def stop_monitoring(self):
         """Stop resource monitoring."""
-        self.monitoring_active = False
-        if self.monitoring_thread and self.monitoring_thread.is_alive():
-            self.monitoring_thread.join(timeout=2.0)
-        print("Resource monitoring stopped")
+        if self.monitoring_active:
+            self.monitoring_active = False
+            if self.monitoring_thread and self.monitoring_thread.is_alive():
+                self.monitoring_thread.join(timeout=2)
+            print("Resource monitoring stopped")
     
-    def _monitoring_loop(self):
-        """Main monitoring loop running in background thread."""
+    def _monitor_resources(self):
+        """Monitor system resources for potential issues."""
         while self.monitoring_active:
             try:
-                # Check memory usage
+                # Monitor memory usage
                 memory_percent = psutil.virtual_memory().percent
                 if memory_percent > self.memory_threshold:
                     print(f"WARNING: High memory usage detected: {memory_percent:.1f}%")
                 
-                # Check CPU usage
+                # Monitor CPU usage
                 cpu_percent = psutil.cpu_percent(interval=1)
                 if cpu_percent > self.cpu_threshold:
                     print(f"WARNING: High CPU usage detected: {cpu_percent:.1f}%")
                 
-                # Sleep before next check
+                # Monitor process-specific resources
+                try:
+                    process = psutil.Process()
+                    process_memory = process.memory_info().rss / 1024 / 1024  # MB
+                    if process_memory > 1000:  # 1GB threshold
+                        print(f"WARNING: Application memory usage: {process_memory:.1f} MB")
+                except:
+                    pass
+                
                 time.sleep(self.monitoring_interval)
                 
             except Exception as e:
-                print(f"Error in monitoring loop: {e}")
-                break
+                print(f"Error in resource monitoring: {e}")
+                time.sleep(self.monitoring_interval)
     
     def register_crash_callback(self, callback: Callable):
         """
@@ -595,6 +531,134 @@ class CrashHandler:
             'recovery_system_available': RECOVERY_SYSTEM_AVAILABLE
         }
 
+
+# =============================================================================
+# EMERGENCY SAVE FUNCTIONS (MOVED FROM experiment_data_saver.py)
+# =============================================================================
+
+def emergency_save_all_tasks(session_manager):
+    """
+    Emergency save function for all active tasks.
+    Called during application crashes or critical errors.
+    
+    MOVED FROM: experiment_data_saver.py
+    UPDATED TO: Use task-specific data_saver modules
+    
+    Parameters:
+    -----------
+    session_manager : SessionManager
+        The session manager instance
+    
+    Returns:
+    --------
+    bool
+        True if emergency save was successful
+    """
+    if not session_manager:
+        print("No session manager available for emergency save")
+        return False
+    
+    try:
+        print("=== EMERGENCY SAVE FOR ALL TASKS ===")
+        
+        current_task = session_manager.session_data.get('current_task')
+        current_task_state = session_manager.session_data.get('current_task_state', {})
+        
+        if current_task and current_task_state:
+            trial_data = current_task_state.get('trial_data', [])
+            
+            if current_task == "Stroop Colour-Word Task":
+                return emergency_save_stroop_task(session_manager, trial_data)
+            elif current_task == "CVC Task":
+                return emergency_save_cvc_task(session_manager, trial_data)
+            elif current_task == "Letter Monitoring Task":
+                # TODO: Create letter_monitoring_task/data_saver.py and import emergency_save_letter_monitoring_task
+                return emergency_save_generic_task(session_manager, current_task, trial_data)
+            elif current_task == "Visual Search Task":
+                # TODO: Create visual_search_task/data_saver.py and import emergency_save_visual_search_task
+                return emergency_save_generic_task(session_manager, current_task, trial_data)
+            elif current_task == "Attention Network Task":
+                # TODO: Create attention_network_task/data_saver.py and import emergency_save_attention_network_task
+                return emergency_save_generic_task(session_manager, current_task, trial_data)
+            elif current_task == "Go/No-Go Task":
+                # TODO: Create gonogo_task/data_saver.py and import emergency_save_gonogo_task
+                return emergency_save_generic_task(session_manager, current_task, trial_data)
+            elif current_task == "Reading Span Test":
+                # TODO: Create reading_span_task/data_saver.py and import emergency_save_reading_span_task
+                return emergency_save_generic_task(session_manager, current_task, trial_data)
+            else:
+                return emergency_save_generic_task(session_manager, current_task, trial_data)
+        
+        print("No active task found for emergency save")
+        return True
+        
+    except Exception as e:
+        print(f"Critical error during emergency save: {e}")
+        return False
+
+
+def emergency_save_generic_task(session_manager, task_name, trial_data):
+    """
+    Generic emergency save for tasks that don't have specific data_saver modules yet.
+    
+    MOVED FROM: experiment_data_saver.py
+    
+    Parameters:
+    -----------
+    session_manager : SessionManager
+        The session manager instance
+    task_name : str
+        Name of the task
+    trial_data : list
+        Trial data to save
+        
+    Returns:
+    --------
+    bool
+        True if emergency save was successful
+    """
+    try:
+        participant_id = session_manager.session_data.get('participant_id', 'EMERGENCY_PARTICIPANT')
+        participant_folder = getattr(session_manager, 'participant_folder_path', None)
+        
+        if not participant_folder:
+            # Create emergency folder with organized structure
+            documents_path = os.path.expanduser("~/Documents")
+            participant_folder = os.path.join(documents_path, "Custom Tests Battery Data", participant_id)
+            os.makedirs(participant_folder, exist_ok=True)
+        
+        # Use organized system/emergency_saves folder
+        emergency_folder = os.path.join(participant_folder, "system", "emergency_saves")
+        os.makedirs(emergency_folder, exist_ok=True)
+        
+        # Generic emergency save
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        emergency_file = os.path.join(emergency_folder, f"EMERGENCY_{task_name.replace(' ', '_')}_{timestamp}.json")
+        
+        emergency_data = {
+            'task_name': task_name,
+            'participant_id': participant_id,
+            'emergency_save_time': datetime.now().isoformat(),
+            'trial_data': trial_data,
+            'session_data': session_manager.session_data,
+            'folder_structure': 'organized_v2',
+            'save_location': 'system/emergency_saves/'
+        }
+        
+        with open(emergency_file, 'w', encoding='utf-8') as f:
+            json.dump(emergency_data, f, indent=2, default=str)
+        
+        print(f"Generic emergency save completed in organized structure: system/emergency_saves/{os.path.basename(emergency_file)}")
+        return True
+        
+    except Exception as e:
+        print(f"Generic emergency save failed: {e}")
+        return False
+
+
+# =============================================================================
+# GLOBAL CRASH HANDLER MANAGEMENT
+# =============================================================================
 
 # Global crash handler instance
 _crash_handler = None
