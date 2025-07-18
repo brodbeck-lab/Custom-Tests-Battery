@@ -17,7 +17,7 @@ class SpeededClassificationTask(QWidget):
         self.current_part = 0
         self.current_index = 0
 
-        # Load stimuli: Replace this with your actual structure
+        # Load stimuli: Replace this with actual structure
         self.parts = [
             {
                 "instruction": "Part 1: Press 'B' if the word starts with the /b/ sound (like “ba…”), and 'P' if it starts with the /p/ sound (like “pa…”)",
@@ -167,8 +167,6 @@ class SpeededClassificationTask(QWidget):
 
         else:
             self.advance_part()
-        
-        self.writing_log()
 
     def play_stimuli(self, condition):
         self.stimulus = self.parts[self.current_part][condition][self.current_index]
@@ -202,6 +200,7 @@ class SpeededClassificationTask(QWidget):
     def register_response(self, choice):
         self.choice = choice
         self.response_time = time.perf_counter()
+        self.writing_log()
         print(f"User clicked: {choice} on stimulus {self.current_index + 1}")
         
         # (Optional: save response to a file here)
