@@ -129,18 +129,18 @@ class AudioryStroopTask(QWidget):
         self.show_instruction()
 
     def show_instruction(self):
-        """Show Instructions Before Each Block"""
+        """Show Instructions before each block"""
         self.label.setText(self.parts[self.current_part]["instruction"])
         self.ok_button.setVisible(True)
 
     def start_part(self):
-        """Start Playing Trials"""
+        """Start playing trials"""
         self.ok_button.setVisible(False)
         self.current_index = 0
         self.play_next_stimulus()
 
     def play_next_stimulus(self):
-        """Play Next Stimulus or Finish Part"""
+        """Play next stimulus or finish part"""
         if self.current_index < len(self.parts[self.current_part]["test"]):
             self.play_stimuli("test")
             self.label.setText("Choose: Female or Male")
@@ -151,7 +151,7 @@ class AudioryStroopTask(QWidget):
             self.advance_part()
 
     def play_stimuli(self, condition):
-        """Play Current Audio File"""
+        """Play current audio file"""
         self.stimulus = self.parts[self.current_part][condition][self.current_index]
         if not os.path.exists(self.stimulus):
                 QMessageBox.warning(self, "File Missing", f"Could not find: {self.stimulus}")
@@ -162,7 +162,7 @@ class AudioryStroopTask(QWidget):
         # self.condition = condition
 
     def advance_part(self):
-        """After All Trials in Current Part"""
+        """After all trials in current part"""
         self.current_part += 1
         if self.current_part < len(self.parts):
             self.show_instruction()
@@ -176,7 +176,7 @@ class AudioryStroopTask(QWidget):
             self.show_main_menu_button()
 
     def register_response(self, choice):
-        """Register and Log Participant’s Response"""
+        """Register and log participant’s response"""
         self.choice = choice
         self.response_time = time.perf_counter()
         self.writing_log()

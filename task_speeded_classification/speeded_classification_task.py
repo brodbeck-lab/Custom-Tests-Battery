@@ -3,6 +3,7 @@ from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtMultimedia import QSoundEffect
 from PyQt6.QtGui import QFont
 
+# System and logging imports
 import os
 from datetime import datetime
 import time
@@ -10,12 +11,28 @@ import time
 class SpeededClassificationTask(QWidget):
     def __init__(self, x_pos, y_pos, participant_id, participant_folder_path):
         super().__init__()
+
+        # Window setup
         self.setWindowTitle("Speeded Classification Task")
         self.setGeometry(x_pos, y_pos, 800, 600)
         self.setStyleSheet("background-color: #f6f6f6;")
 
+        # Participant info
+        self.participant_id = participant_id
+        self.participant_folder_path = participant_folder_path
+
+        # Stimulus Presentation Control
         self.current_part = 0
         self.current_index = 0
+
+        # Log file
+        self.stimulus_onset_time = None
+        self.response_time = None
+        self.condition = None
+        self.stimulus = None
+        self.choice = None
+        self.experiment_log = []
+
 
         # Load stimuli: Replace this with actual structure
         self.parts = [
@@ -35,20 +52,10 @@ class SpeededClassificationTask(QWidget):
             }
         ]
 
-        # Log file
-        self.participant_id = participant_id
-        self.participant_folder_path = participant_folder_path
-        self.stimulus_onset_time = None
-        self.response_time = None
-        self.log_state = None
-        self.key_pressed = None
-        self.condition = None
-        self.stimulus = None
-        self.choice = None
-        self.experiment_log = []
-
         # Setup UI
         self.layout = QVBoxLayout()
+
+        # Instruction Label
         self.label = QLabel("", self)
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label.setFont(QFont("Arial", 20))
@@ -65,12 +72,13 @@ class SpeededClassificationTask(QWidget):
 
         self.layout.addWidget(self.label)
 
+        # OK buttons
         self.ok_button = QPushButton("OK", self)
         self.ok_button.setFont(QFont("Arial", 16))
         self.ok_button.clicked.connect(self.start_part)
         self.layout.addWidget(self.ok_button)
 
-        # response buttons
+        # Response buttons
         self.button_b = QPushButton("B", self)
         self.button_b.setFont(QFont("Arial", 18))
         self.button_b.clicked.connect(lambda: self.register_response("B"))
@@ -87,12 +95,13 @@ class SpeededClassificationTask(QWidget):
         self.button_m.setFont(QFont("Arial", 18))
         self.button_m.clicked.connect(lambda: self.register_response("Male"))
 
-        # Hide them initially
+        # Hide buttons initially
         self.button_b.hide()
         self.button_p.hide()
         self.button_f.hide()
         self.button_m.hide()
 
+        # Button Styling
         button_style = """
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
@@ -128,21 +137,25 @@ class SpeededClassificationTask(QWidget):
         self.sound = QSoundEffect()
         self.sound.setVolume(0.9)
 
-        # Focus policy to capture keypresses
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        # # Focus policy to capture keypresses
+        # self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
+        # Start With Instruction Screen
         self.show_instruction()
 
     def show_instruction(self):
+        """Show instructions before each block"""
         self.label.setText(self.parts[self.current_part]["instruction"])
         self.ok_button.setVisible(True)
 
     def start_part(self):
+        """Start playing trials"""
         self.ok_button.setVisible(False)
         self.current_index = 0
         self.play_next_stimulus()
 
     def play_next_stimulus(self):
+        """Play condition or Finish Part"""
         current = self.parts[self.current_part]
 
         # Hide all buttons
@@ -169,6 +182,7 @@ class SpeededClassificationTask(QWidget):
             self.advance_part()
 
     def play_stimuli(self, condition):
+        """Play current audio file"""
         self.stimulus = self.parts[self.current_part][condition][self.current_index]
         if not os.path.exists(self.stimulus):
                 QMessageBox.warning(self, "File Missing", f"Could not find: {self.stimulus}")
@@ -179,6 +193,7 @@ class SpeededClassificationTask(QWidget):
         self.condition = condition
 
     def advance_part(self):
+        """After all trials in current condition"""
         self.current_part += 1
         if self.current_part < len(self.parts):
             self.show_instruction()
@@ -198,6 +213,7 @@ class SpeededClassificationTask(QWidget):
     #         self.play_next_stimulus()
 
     def register_response(self, choice):
+        """Register and log participant’s response"""
         self.choice = choice
         self.response_time = time.perf_counter()
         self.writing_log()
@@ -260,7 +276,6 @@ class SpeededClassificationTask(QWidget):
         log_line = f"{self.condition},{self.stimulus},{self.choice},{stim_ts},{resp_ts},{rt}"
 
         self.experiment_log.append(log_line)
-        self.key_pressed = False
 
     def finish_experiment(self):
         """Write to log file"""
