@@ -170,7 +170,8 @@ class SelectionMenu(QMainWindow):
             "Visual Search Task",
             "Attention Network Task",
             "Go/No-Go Task",
-            "Reading Span Test"
+            "Reading Span Test",
+            "Speeded Classification Task"
         ]
         
         # Create the six buttons
@@ -529,6 +530,9 @@ class SelectionMenu(QMainWindow):
             
         elif clean_test_name == "Reading Span Test":
             self.launch_reading_span_test(x_pos, y_pos)
+
+        elif clean_test_name == "Speeded Classification Task":
+            self.launch_speeded_classification_task(x_pos, y_pos)
         
         else:
             print(f"Unknown test: {clean_test_name}")
@@ -649,6 +653,24 @@ class SelectionMenu(QMainWindow):
     def launch_reading_span_test(self, x_pos, y_pos):
         """Launch Reading Span Test (placeholder)."""
         self.show_not_implemented_message("Reading Span Test")
+    
+    def launch_speeded_classification_task(self, x_pos, y_pos):
+        """Launch Speeded Classification Task."""
+        try:
+            from task_speeded_classification.speeded_classification_task import SpeededClassificationTask
+
+            self.speeded_task = SpeededClassificationTask(
+                x_pos=x_pos,
+                y_pos=y_pos,
+                participant_id=self.participant_id,
+                participant_folder_path=self.participant_folder_path
+            )
+            self.speeded_task.show()
+            self.hide()
+        except Exception as e:
+            print(f"Error launching Speeded Classification Task: {e}")
+            QMessageBox.critical(self, "Launch Error", f"Failed to launch Speeded Classification Task!\n\n{str(e)}")
+
 
     def show_not_implemented_message(self, task_name):
         """Show standardized message for not-yet-implemented tasks."""
