@@ -1,8 +1,11 @@
-import os
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QMessageBox
 from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtMultimedia import QSoundEffect
 from PyQt6.QtGui import QFont
+
+import os
+from datetime import datetime
+import time
 
 class SpeededClassificationTask(QWidget):
     def __init__(self, x_pos, y_pos, participant_id, participant_folder_path):
@@ -11,8 +14,6 @@ class SpeededClassificationTask(QWidget):
         self.setGeometry(x_pos, y_pos, 800, 600)
         self.setStyleSheet("background-color: #f6f6f6;")
 
-        self.participant_id = participant_id
-        self.participant_folder_path = participant_folder_path
         self.current_part = 0
         self.current_index = 0
 
@@ -33,6 +34,18 @@ class SpeededClassificationTask(QWidget):
                 ]
             }
         ]
+
+        # Log file
+        self.participant_id = participant_id
+        self.participant_folder_path = participant_folder_path
+        self.stimulus_onset_time = None
+        self.response_time = None
+        self.log_state = None
+        self.key_pressed = None
+        self.condition = None
+        self.stimulus = None
+        self.choice = None
+        self.experiment_log = []
 
         # Setup UI
         self.layout = QVBoxLayout()
@@ -154,14 +167,18 @@ class SpeededClassificationTask(QWidget):
 
         else:
             self.advance_part()
-    
+        
+        self.writing_log()
+
     def play_stimuli(self, condition):
-        stimulus_path = self.parts[self.current_part][condition][self.current_index]
-        if not os.path.exists(stimulus_path):
-                QMessageBox.warning(self, "File Missing", f"Could not find: {stimulus_path}")
+        self.stimulus = self.parts[self.current_part][condition][self.current_index]
+        if not os.path.exists(self.stimulus):
+                QMessageBox.warning(self, "File Missing", f"Could not find: {self.stimulus}")
                 return
-        self.sound.setSource(QUrl.fromLocalFile(stimulus_path))
+        self.stimulus_onset_time = time.perf_counter()
+        self.sound.setSource(QUrl.fromLocalFile(self.stimulus))
         self.sound.play()
+        self.condition = condition
 
     def advance_part(self):
         self.current_part += 1
@@ -171,16 +188,20 @@ class SpeededClassificationTask(QWidget):
             self.label.setText("✅ Task Complete!")
             self.ok_button.setVisible(False)
 
+            self.finish_experiment()
+
             # Show Main Menu button
             self.show_main_menu_button()
 
-    def keyPressEvent(self, event):
-        key = event.text().lower()
-        if key in ['b', 'p'] and self.sound.isPlaying() == False:
-            self.current_index += 1
-            self.play_next_stimulus()
+    # def keyPressEvent(self, event):
+    #     key = event.text().lower()
+    #     if key in ['b', 'p'] and self.sound.isPlaying() == False:
+    #         self.current_index += 1
+    #         self.play_next_stimulus()
 
     def register_response(self, choice):
+        self.choice = choice
+        self.response_time = time.perf_counter()
         print(f"User clicked: {choice} on stimulus {self.current_index + 1}")
         
         # (Optional: save response to a file here)
@@ -229,5 +250,48 @@ class SpeededClassificationTask(QWidget):
         self.selection_menu.show()
         
         self.close()
+
+    def writing_log(self):
+        """Write log sentence based on the current state"""
+        stim_time = self.stimulus_onset_time
+        resp_time = self.response_time
+        rt = f"{resp_time - stim_time:.3f}"
+        stim_ts = f"{stim_time:.6f}" 
+        resp_ts = f"{resp_time:.6f}"
+        log_line = f"{self.condition},{self.stimulus},{self.choice},{stim_ts},{resp_ts},{rt}"
+
+        self.experiment_log.append(log_line)
+        self.key_pressed = False
+
+    def finish_experiment(self):
+        """Write to log file"""
+        # self.label.setText("Done!")
+
+        # === Step 1: Build save directory
+        save_dir = os.path.expanduser("./")
+        os.makedirs(save_dir, exist_ok=True)
+
+        # === Step 2: Build filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"speeded_classification_log_{timestamp}.txt"
+        save_path = os.path.join(save_dir, filename)
+
+        # === Step 3: Save log lines
+        try:
+            with open(save_path, 'w') as f:
+                f.write("SPEEDED CLASSIFICATION TEST RESULTS\n")
+                f.write("=" * 60 + "\n\n")
+                f.write(f"Participant ID: {self.participant_id}\n")
+                f.write(f"Date/Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write("\nTrial Format: condition,stimulus,participant's_choice,time_status,onset_time,response_time,RT_seconds\n")
+                f.write("-" * 60 + "\n")
+                for line in self.experiment_log:
+                    f.write(line + '\n')
+                f.write("\n" + "=" * 60 + "\n")
+                f.write(f"Save completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+
+            print(f"Saved experiment log to: {save_path}")
+        except Exception as e:
+            print(f"Failed to save experiment log: {e}")
 
 
