@@ -82,7 +82,7 @@ class CVCDisplayWindow(QWidget):
         config_layout.setContentsMargins(40, 20, 40, 20)
         
         # Title
-        title_label = QLabel("CVC Task Configuration")
+        title_label = QLabel("Task Configuration")
         title_label.setFont(QFont('Arial', 24, QFont.Weight.Bold))
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("color: #2c3e50; margin-bottom: 20px;")
