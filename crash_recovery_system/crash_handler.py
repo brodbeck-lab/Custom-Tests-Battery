@@ -38,12 +38,12 @@ try:
     # Import task-specific emergency save functions from the new data_saver modules
     from task_cvc.data_saver import emergency_save_cvc_task
     from task_stroop_colorword.data_saver import emergency_save_stroop_task
+    from task_reading_span.data_saver import emergency_save_reading_span_task  # ADD THIS LINE
     # TODO: Add other task emergency save imports as you create more data_saver.py files:
     # from letter_monitoring_task.data_saver import emergency_save_letter_monitoring_task
     # from visual_search_task.data_saver import emergency_save_visual_search_task
     # from attention_network_task.data_saver import emergency_save_attention_network_task
     # from gonogo_task.data_saver import emergency_save_gonogo_task
-    # from reading_span_task.data_saver import emergency_save_reading_span_task
     RECOVERY_SYSTEM_AVAILABLE = True
 except ImportError:
     RECOVERY_SYSTEM_AVAILABLE = False
@@ -571,6 +571,8 @@ def emergency_save_all_tasks(session_manager):
                 return emergency_save_stroop_task(session_manager, trial_data)
             elif current_task == "CVC Task":
                 return emergency_save_cvc_task(session_manager, trial_data)
+            elif current_task == "Reading Span Task":  # ADD THIS CONDITION
+                return emergency_save_reading_span_task(session_manager, trial_data)
             elif current_task == "Letter Monitoring Task":
                 # TODO: Create letter_monitoring_task/data_saver.py and import emergency_save_letter_monitoring_task
                 return emergency_save_generic_task(session_manager, current_task, trial_data)
@@ -582,9 +584,6 @@ def emergency_save_all_tasks(session_manager):
                 return emergency_save_generic_task(session_manager, current_task, trial_data)
             elif current_task == "Go/No-Go Task":
                 # TODO: Create gonogo_task/data_saver.py and import emergency_save_gonogo_task
-                return emergency_save_generic_task(session_manager, current_task, trial_data)
-            elif current_task == "Reading Span Test":
-                # TODO: Create reading_span_task/data_saver.py and import emergency_save_reading_span_task
                 return emergency_save_generic_task(session_manager, current_task, trial_data)
             else:
                 return emergency_save_generic_task(session_manager, current_task, trial_data)

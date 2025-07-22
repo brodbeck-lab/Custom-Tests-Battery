@@ -281,7 +281,7 @@ class StroopColorWordDisplayWindow(QWidget):
         config_layout.setContentsMargins(40, 20, 40, 20)
         
         # Title
-        title_label = QLabel("Stroop Color-Word Task Configuration")
+        title_label = QLabel("Task Configuration")
         title_label.setFont(QFont('Arial', 24, QFont.Weight.Bold))
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("color: #2c3e50; margin-bottom: 20px;")
@@ -2455,7 +2455,7 @@ def main():
             "Visual Search Task",
             "Attention Network Task",
             "Go/No-Go Task",
-            "Reading Span Test"
+            "Reading Span Task"
         ]
         session_manager.set_task_queue(default_tasks)
         print("Session manager initialized for testing")
