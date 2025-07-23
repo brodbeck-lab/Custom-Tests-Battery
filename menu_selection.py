@@ -10,7 +10,6 @@ from crash_recovery_system.session_manager import get_session_manager, initializ
 from crash_recovery_system.task_state_saver import get_recovery_info, CrashDetector
 import crash_recovery_system.crash_handler as crash_handler  # Initialize crash handler
 
-
 class SelectionMenu(QMainWindow):
     def __init__(self, buttons_size=1.0, buttons_elevation=1.0, participant_id=None, participant_folder_path=None, recovery_mode=False):
         super().__init__()
@@ -170,7 +169,7 @@ class SelectionMenu(QMainWindow):
             "Visual Search Task",
             "Attention Network Task",
             "Go/No-Go Task",
-            "Reading Span Test"
+            "Reading Span Task"
         ]
         
         # Create the six buttons
@@ -527,8 +526,8 @@ class SelectionMenu(QMainWindow):
         elif clean_test_name == "Go/No-Go Task":
             self.launch_gonogo_task(x_pos, y_pos)
             
-        elif clean_test_name == "Reading Span Test":
-            self.launch_reading_span_test(x_pos, y_pos)
+        elif clean_test_name == "Reading Span Task":
+            self.launch_reading_span_task(x_pos, y_pos)
         
         else:
             print(f"Unknown test: {clean_test_name}")
@@ -614,7 +613,7 @@ class SelectionMenu(QMainWindow):
             
             # Hide the selection menu
             self.hide()
-            
+
         except Exception as e:
             print(f"Error launching CVC Task: {str(e)}")
             import traceback
@@ -634,6 +633,57 @@ class SelectionMenu(QMainWindow):
                                f"Error: {str(e)}\n\n"
                                f"Please try again or contact support if the problem persists.")
     
+    
+    def launch_reading_span_task(self, x_pos, y_pos):
+        """Launch Reading Span Task with configuration interface and enhanced error handling."""
+        try:
+            print(f"Launching Reading Span task with configuration interface:")
+            print(f"  - Participant ID: {self.participant_id}")
+            print(f"  - Participant folder: {self.participant_folder_path}")
+            print(f"  - Position: x={x_pos}, y={y_pos}")
+            print(f"  - Recovery mode: {self.recovery_mode}")
+            print(f"  - Session manager: {'AVAILABLE' if get_session_manager() else 'NOT AVAILABLE'}")
+            print(f"  - Configuration interface: ENABLED")
+            
+            # Import the Reading Span task
+            from task_reading_span.reading_span_task import ReadingSpanTask
+            
+            # Create Reading Span task with configuration support and recovery
+            self.reading_span_task = ReadingSpanTask(
+                sentence_file=None,
+                x_pos=x_pos, 
+                y_pos=y_pos,
+                participant_id=self.participant_id,
+                participant_folder_path=self.participant_folder_path
+            )
+            
+            # Show the task (it will start in configuration mode)
+            self.reading_span_task.show()
+            print("Reading Span Task launched successfully with configuration interface")
+            print("User will now configure task parameters before starting")
+            
+            # Hide the selection menu
+            self.hide()
+
+        except Exception as e:
+            print(f"Error launching Reading Span Task: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            
+            # Emergency save if session manager available
+            session_manager = get_session_manager()
+            if session_manager:
+                try:
+                    session_manager.emergency_save()
+                    print("Emergency save completed due to Reading Span launch error")
+                except Exception as save_error:
+                    print(f"Emergency save failed: {save_error}")
+            
+            QMessageBox.critical(self, "Launch Error", 
+                            f"Failed to launch Reading Span task!\n\n"
+                            f"Error: {str(e)}\n\n"
+                            f"Please try again or contact support if the problem persists.")
+    
     def launch_visual_search_task(self, x_pos, y_pos):
         """Launch Visual Search Task (placeholder)."""
         self.show_not_implemented_message("Visual Search Task")
@@ -645,10 +695,6 @@ class SelectionMenu(QMainWindow):
     def launch_gonogo_task(self, x_pos, y_pos):
         """Launch Go/No-Go Task (placeholder)."""
         self.show_not_implemented_message("Go/No-Go Task")
-    
-    def launch_reading_span_test(self, x_pos, y_pos):
-        """Launch Reading Span Test (placeholder)."""
-        self.show_not_implemented_message("Reading Span Test")
 
     def show_not_implemented_message(self, task_name):
         """Show standardized message for not-yet-implemented tasks."""
@@ -722,10 +768,11 @@ def main():
     app.setApplicationVersion("2.0")
     app.setOrganizationName("Behavioral Research Lab")
     
-    print("=== SELECTION MENU TESTING (WITH CVC TASK) ===")
+    print("=== SELECTION MENU TESTING (WITH ALL AVAILABLE TASKS) ===")
     print("Crash recovery system: ENABLED")
     print("Stroop task configuration interface: ENABLED")
     print("CVC task configuration interface: ENABLED")
+    print("Reading Span task configuration interface: ENABLED")  # ADD THIS LINE
     print("Testing with sample participant data...")
     
     # Sample participant data for testing
@@ -740,18 +787,18 @@ def main():
         session_manager = initialize_session_manager(sample_participant_id, sample_folder)
         default_tasks = [
             "Stroop Colour-Word Task",
-            "CVC Task",  # UPDATED to include CVC Task
+            "CVC Task",
             "Visual Search Task",
             "Attention Network Task",
             "Go/No-Go Task",
-            "Reading Span Test"
+            "Reading Span Task"  # This should already be in the list
         ]
         session_manager.set_task_queue(default_tasks)
         print("Session manager initialized for testing")
     except Exception as e:
         print(f"Error initializing session manager: {e}")
     
-    # Create selection menu with CVC task support
+    # Create selection menu with all available task support
     window = SelectionMenu(
         buttons_size=1.0, 
         buttons_elevation=1.0,
