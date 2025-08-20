@@ -209,3 +209,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+# build artifacts
+build/
+dist/
+
+
+# virtual environment directories
+task-venv/
