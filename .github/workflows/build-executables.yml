@@ -35,18 +35,18 @@ jobs:
     - name: Build Windows executable
       run: |
         # Create the executable with all necessary files
-        pyinstaller --onefile --windowed ^
-          --name "Custom-Tests-Battery" ^
-          --add-data "task_cvc;task_cvc" ^
-          --add-data "crash_recovery_system;crash_recovery_system" ^
-          --add-data "*.txt;." ^
-          --hidden-import "crash_recovery_system.crash_handler" ^
-          --hidden-import "crash_recovery_system.session_manager" ^
-          --hidden-import "crash_recovery_system.task_state_saver" ^
-          --hidden-import "pyaudio" ^
-          --hidden-import "sounddevice" ^
-          --hidden-import "librosa" ^
-          --collect-all "librosa" ^
+        pyinstaller --onefile --windowed `
+          --name "Custom-Tests-Battery" `
+          --add-data "task_cvc;task_cvc" `
+          --add-data "crash_recovery_system;crash_recovery_system" `
+          --add-data "*.txt;." `
+          --hidden-import "crash_recovery_system.crash_handler" `
+          --hidden-import "crash_recovery_system.session_manager" `
+          --hidden-import "crash_recovery_system.task_state_saver" `
+          --hidden-import "pyaudio" `
+          --hidden-import "sounddevice" `
+          --hidden-import "librosa" `
+          --collect-all "librosa" `
           welcome.py
     
     - name: Test executable
@@ -76,8 +76,8 @@ jobs:
     
     - name: Install system dependencies (macOS)
       run: |
-        # Audio libraries will be handled by Python packages during build
-        echo "macOS system ready for build"
+        # Install PortAudio headers needed for PyAudio compilation
+        brew install portaudio pkg-config
     
     - name: Install Python dependencies
       run: |
