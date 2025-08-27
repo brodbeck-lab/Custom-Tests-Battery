@@ -49,11 +49,16 @@ jobs:
           --collect-all "librosa" `
           welcome.py
     
-    - name: Test executable
+    - name: Verify executable was created
       run: |
-        # Quick test to ensure the executable starts
-        Start-Process -FilePath "dist/Custom-Tests-Battery.exe" -ArgumentList "--version" -Wait -NoNewWindow
-      continue-on-error: true
+        # Just check that the executable file exists
+        if (Test-Path "dist/Custom-Tests-Battery.exe") {
+          Write-Host "Executable created successfully"
+          Get-Item "dist/Custom-Tests-Battery.exe" | Select-Object Name, Length, LastWriteTime
+        } else {
+          Write-Host "Error: Executable not found"
+          exit 1
+        }
     
     - name: Upload Windows artifact
       uses: actions/upload-artifact@v4
@@ -135,10 +140,9 @@ jobs:
           brew install create-dmg
         fi
         
-        # Create DMG with the app bundle
+        # Create DMG with the app bundle (without custom icon)
         create-dmg \
           --volname "Custom Tests Battery" \
-          --volicon "dist/Custom Tests Battery.app/Contents/Resources/icon.icns" \
           --window-pos 200 120 \
           --window-size 800 400 \
           --icon-size 100 \
