@@ -22,8 +22,8 @@ jobs:
     
     - name: Install system dependencies (Windows)
       run: |
-        # Install Windows-specific audio libraries
-        choco install portaudio --yes
+        # Audio libraries will be handled by Python packages during build
+        echo "Windows system ready for build"
       
     - name: Install Python dependencies
       run: |
@@ -43,6 +43,10 @@ jobs:
           --hidden-import "crash_recovery_system.crash_handler" ^
           --hidden-import "crash_recovery_system.session_manager" ^
           --hidden-import "crash_recovery_system.task_state_saver" ^
+          --hidden-import "pyaudio" ^
+          --hidden-import "sounddevice" ^
+          --hidden-import "librosa" ^
+          --collect-all "librosa" ^
           welcome.py
     
     - name: Test executable
@@ -72,8 +76,8 @@ jobs:
     
     - name: Install system dependencies (macOS)
       run: |
-        # Install macOS-specific audio libraries
-        brew install portaudio
+        # Audio libraries will be handled by Python packages during build
+        echo "macOS system ready for build"
     
     - name: Install Python dependencies
       run: |
@@ -89,22 +93,26 @@ jobs:
         import py2app
         
         APP = ['welcome.py']
-        DATA_FILES = [
-            ('task_cvc', ['task_cvc']),
-            ('crash_recovery_system', ['crash_recovery_system']),
-        ]
+        DATA_FILES = []
         OPTIONS = {
             'argv_emulation': True,
-            'packages': [
+            'packages': [],
+            'includes': [
                 'crash_recovery_system',
                 'task_cvc',
             ],
-            'includes': [
-                'crash_recovery_system.crash_handler',
-                'crash_recovery_system.session_manager', 
-                'crash_recovery_system.task_state_saver',
+            'excludes': [
+                'tkinter',
+                'PyInstaller',
+                'numba',
+                'llvmlite', 
+                'test',
+                'tests',
+                'numpy.tests',
+                'scipy.tests',
+                'pandas.tests',
             ],
-            'excludes': ['tkinter'],
+            'resources': ['task_cvc', 'crash_recovery_system'],
         }
         
         setup(
