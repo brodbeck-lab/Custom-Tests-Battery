@@ -38,6 +38,7 @@ try:
     # Import task-specific emergency save functions from the new data_saver modules
     from task_cvc.data_saver import emergency_save_cvc_task
     from task_stroop_colorword.data_saver import emergency_save_stroop_task
+    from task_speeded_classification.data_saver import emergency_save_speeded_classification_task
     # TODO: Add other task emergency save imports as you create more data_saver.py files:
     # from letter_monitoring_task.data_saver import emergency_save_letter_monitoring_task
     # from visual_search_task.data_saver import emergency_save_visual_search_task
@@ -574,6 +575,9 @@ def emergency_save_all_tasks(session_manager):
             elif current_task == "Letter Monitoring Task":
                 # TODO: Create letter_monitoring_task/data_saver.py and import emergency_save_letter_monitoring_task
                 return emergency_save_generic_task(session_manager, current_task, trial_data)
+            elif current_task == "Speeded Classification Task":
+                return emergency_save_speeded_classification_task(session_manager, trial_data)
+
             elif current_task == "Visual Search Task":
                 # TODO: Create visual_search_task/data_saver.py and import emergency_save_visual_search_task
                 return emergency_save_generic_task(session_manager, current_task, trial_data)
