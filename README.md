@@ -169,7 +169,7 @@ The project uses GitHub Actions workflows to automatically build executables for
 ### Crash Recovery System
 - **Global Level** (crash_handler.py): Catches unhandled exceptions
 - **Session Level** (session_manager.py): Manages participant sessions and recovery
-- **Task Level** (task_state_saver.py): Auto-saves individual task progress
+- **Task Level** (task_state_saver.py): Auto-saves individual task progress.
 
 ### Data Management
 - **Modular Data Savers**: Each task has its own data export module
