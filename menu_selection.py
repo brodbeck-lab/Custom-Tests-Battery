@@ -678,9 +678,9 @@ class SelectionMenu(QMainWindow):
     def launch_auditory_stroop_task(self, x_pos, y_pos):
         """Launch Auditory Stroop Task."""
         try:
-            from task_auditory_stroop.auditory_stroop_task import AudioryStroopTask
+            from task_auditory_stroop.auditory_stroop_task import AuditoryStroopTask
 
-            self.speeded_task = AudioryStroopTask(
+            self.speeded_task = AuditoryStroopTask(
                 x_pos=x_pos,
                 y_pos=y_pos,
                 participant_id=self.participant_id,
