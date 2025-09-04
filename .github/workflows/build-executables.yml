@@ -51,8 +51,6 @@ jobs:
           --add-data "task_speeded_classification;task_speeded_classification" `
           --add-data "task_auditory_stroop;task_auditory_stroop" `
           --add-data "crash_recovery_system;crash_recovery_system" `
-          --add-data "*.txt;." `
-          --add-data "*.csv;." `
           --hidden-import "crash_recovery_system.crash_handler" `
           --hidden-import "crash_recovery_system.session_manager" `
           --hidden-import "crash_recovery_system.task_state_saver" `
