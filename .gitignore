@@ -133,10 +133,14 @@ $RECYCLE.BIN/
 # OBS or other recording software
 obs/
 
-# Audio files (if not needed in repo)
+# Audio files (if not needed in repo) - EXCEPT task stimuli
 *.wav
 *.mp3
 *.m4a
+
+# IMPORTANT: Include task audio stimuli (override above exclusion)
+!task_auditory_stroop/stimuli/*.wav
+!task_speeded_classification/stimuli/*.wav
 
 # Data files (participant data - keep private)
 /Custom Tests Battery Data/
@@ -189,6 +193,7 @@ celerybeat.pid
 env/
 venv/
 ENV/
+task-venv/
 env.bak/
 venv.bak/
 
@@ -210,11 +215,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-
 # build artifacts
 build/
 dist/
-
-
-# virtual environment directories
-task-venv/

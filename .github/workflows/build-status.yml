@@ -2,36 +2,123 @@ name: Build Status Notifications
 
 on:
   workflow_run:
-    workflows: ["Build Executables"]
+    workflows: ["Build Executables", "Nightly Development Builds"]
     types:
       - completed
 
 jobs:
-  notify-team:
+  log-build-status:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Notify on build completion
+    - name: Log build completion status
       uses: actions/github-script@v7
       with:
         script: |
           const conclusion = '${{ github.event.workflow_run.conclusion }}';
+          const workflowName = '${{ github.event.workflow_run.name }}';
           const workflowUrl = '${{ github.event.workflow_run.html_url }}';
+          const branch = '${{ github.event.workflow_run.head_branch }}';
+          const commit = '${{ github.event.workflow_run.head_sha }}';
           
           let status = conclusion === 'success' ? 'succeeded' : 'failed';
+          let statusIcon = conclusion === 'success' ? '✅' : '❌';
           
-          const message = `**Development Build ${status}**
+          const message = `${statusIcon} **${workflowName} ${status}**
           
-          The latest development build has ${status}.
-          
-          **Details:**
-          - Workflow: [${conclusion}](${workflowUrl})
-          - Commit: ${{ github.event.workflow_run.head_sha }}
-          - Branch: ${{ github.event.workflow_run.head_branch }}
+          **Build Details:**
+          - Status: ${conclusion.toUpperCase()}
+          - Branch: ${branch}
+          - Commit: ${commit.substring(0, 7)}
+          - Python Version: 3.12
+          - Workflow: [View Details](${workflowUrl})
           
           ${conclusion === 'success' ? 
-            'Download the executables from the [workflow artifacts](' + workflowUrl + ')' : 
-            'Check the [workflow logs](' + workflowUrl + ') for details'}`;
+            '**Next Steps:**\n- Download executables from workflow artifacts\n- Test the build on your target platform\n- Review any changes since last build' : 
+            '**Action Required:**\n- Check workflow logs for build errors\n- Review recent commits for potential issues\n- Verify all dependencies are correctly specified'}
           
-          // You can extend this to post to Slack, Discord, etc.
+          **Available Artifacts:**${conclusion === 'success' ? 
+            '\n- Windows executable (.exe)\n- macOS application (.dmg)' : 
+            '\n- Build logs and error reports'}
+          
+          ---
+          
+          _Build status logged automatically. No external notifications configured._`;
+          
+          console.log('='.repeat(80));
+          console.log('BUILD STATUS NOTIFICATION');
+          console.log('='.repeat(80));
           console.log(message);
+          console.log('='.repeat(80));
+          
+          // Create a workflow summary for easy viewing
+          await core.summary
+            .addHeading(`${workflowName} Build Status`)
+            .addRaw(message.replace(/\*\*/g, ''))
+            .write();
+
+  update-readme-badge:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.name == 'Build Executables'
+    
+    steps:
+    - name: Update build status badge
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const conclusion = '${{ github.event.workflow_run.conclusion }}';
+          const branch = '${{ github.event.workflow_run.head_branch }}';
+          
+          // Log badge status update
+          const badgeColor = conclusion === 'success' ? 'brightgreen' : 'red';
+          const badgeText = conclusion === 'success' ? 'passing' : 'failing';
+          
+          console.log(`Build badge status: ${badgeText} (${badgeColor})`);
+          console.log(`Branch: ${branch}`);
+          console.log(`Badge URL would be: https://img.shields.io/badge/build-${badgeText}-${badgeColor}`);
+          
+          // Note: Actual README badge update would require additional permissions
+          // and repository write access. This is just logging the intended update.
+
+  archive-build-info:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    
+    steps:
+    - name: Archive successful build information
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const buildInfo = {
+            workflow: '${{ github.event.workflow_run.name }}',
+            conclusion: '${{ github.event.workflow_run.conclusion }}',
+            branch: '${{ github.event.workflow_run.head_branch }}',
+            commit: '${{ github.event.workflow_run.head_sha }}',
+            timestamp: new Date().toISOString(),
+            python_version: '3.12',
+            workflow_url: '${{ github.event.workflow_run.html_url }}',
+            run_id: '${{ github.event.workflow_run.id }}'
+          };
+          
+          console.log('Successful build information archived:');
+          console.log(JSON.stringify(buildInfo, null, 2));
+          
+          // This information could be used for:
+          // - Release notes generation
+          # - Build history tracking
+          # - Automated testing notifications
+          # - Quality assurance workflows
+
+  cleanup-old-artifacts:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.name == 'Nightly Development Builds'
+    
+    steps:
+    - name: Log artifact cleanup
+      uses: actions/github-script@v7
+      with:
+        script: |
+          console.log('Nightly build completed - artifact retention managed automatically');
+          console.log('- Nightly builds: 7-day retention');
+          console.log('- Release builds: 30-day retention');
+          console.log('- Manual cleanup not required with current GitHub Actions settings');
