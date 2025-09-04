@@ -1,0 +1,37 @@
+name: Build Status Notifications
+
+on:
+  workflow_run:
+    workflows: ["Build Executables"]
+    types:
+      - completed
+
+jobs:
+  notify-team:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Notify on build completion
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const conclusion = '${{ github.event.workflow_run.conclusion }}';
+          const workflowUrl = '${{ github.event.workflow_run.html_url }}';
+          
+          let status = conclusion === 'success' ? 'succeeded' : 'failed';
+          
+          const message = `**Development Build ${status}**
+          
+          The latest development build has ${status}.
+          
+          **Details:**
+          - Workflow: [${conclusion}](${workflowUrl})
+          - Commit: ${{ github.event.workflow_run.head_sha }}
+          - Branch: ${{ github.event.workflow_run.head_branch }}
+          
+          ${conclusion === 'success' ? 
+            'Download the executables from the [workflow artifacts](' + workflowUrl + ')' : 
+            'Check the [workflow logs](' + workflowUrl + ') for details'}`;
+          
+          // You can extend this to post to Slack, Discord, etc.
+          console.log(message);

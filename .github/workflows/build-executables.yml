@@ -1,0 +1,209 @@
+name: Build Executables
+
+on:
+  push:
+    branches: [ development, test-github-actions ]  # Added your test branch
+  pull_request:
+    branches: [ development, test-github-actions ]
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install system dependencies (Windows)
+      run: |
+        # Audio libraries will be handled by Python packages during build
+        echo "Windows system ready for build"
+      
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+        # Ensure PyInstaller is installed
+        pip install pyinstaller
+    
+    - name: Build Windows executable
+      run: |
+        # Create the executable with all necessary files
+        pyinstaller --onefile --windowed `
+          --name "Custom-Tests-Battery" `
+          --add-data "task_cvc;task_cvc" `
+          --add-data "crash_recovery_system;crash_recovery_system" `
+          --add-data "*.txt;." `
+          --hidden-import "crash_recovery_system.crash_handler" `
+          --hidden-import "crash_recovery_system.session_manager" `
+          --hidden-import "crash_recovery_system.task_state_saver" `
+          --hidden-import "pyaudio" `
+          --hidden-import "sounddevice" `
+          --hidden-import "librosa" `
+          --collect-all "librosa" `
+          welcome.py
+    
+    - name: Verify executable was created
+      run: |
+        # Just check that the executable file exists
+        if (Test-Path "dist/Custom-Tests-Battery.exe") {
+          Write-Host "Executable created successfully"
+          Get-Item "dist/Custom-Tests-Battery.exe" | Select-Object Name, Length, LastWriteTime
+        } else {
+          Write-Host "Error: Executable not found"
+          exit 1
+        }
+    
+    - name: Upload Windows artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-executable
+        path: dist/Custom-Tests-Battery.exe
+        retention-days: 30
+
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install system dependencies (macOS)
+      run: |
+        # Install PortAudio headers needed for PyAudio compilation
+        brew install portaudio pkg-config
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+        # Ensure py2app is installed
+        pip install py2app
+    
+    - name: Create setup.py for py2app
+      run: |
+        cat > setup.py << 'EOF'
+        from setuptools import setup
+        import py2app
+        
+        APP = ['welcome.py']
+        DATA_FILES = []
+        OPTIONS = {
+            'argv_emulation': True,
+            'packages': [],
+            'includes': [
+                'crash_recovery_system',
+                'task_cvc',
+            ],
+            'excludes': [
+                'tkinter',
+                'PyInstaller',
+                'numba',
+                'llvmlite', 
+                'test',
+                'tests',
+                'numpy.tests',
+                'scipy.tests',
+                'pandas.tests',
+            ],
+            'resources': ['task_cvc', 'crash_recovery_system'],
+        }
+        
+        setup(
+            app=APP,
+            data_files=DATA_FILES,
+            options={'py2app': OPTIONS},
+            setup_requires=['py2app'],
+            name='Custom Tests Battery',
+        )
+        EOF
+    
+    - name: Build macOS app bundle
+      run: |
+        python setup.py py2app
+    
+    - name: Create DMG
+      run: |
+        # Install create-dmg if not available
+        if ! command -v create-dmg &> /dev/null; then
+          brew install create-dmg
+        fi
+        
+        # Create DMG with the app bundle (without custom icon)
+        create-dmg \
+          --volname "Custom Tests Battery" \
+          --window-pos 200 120 \
+          --window-size 800 400 \
+          --icon-size 100 \
+          --icon "Custom Tests Battery.app" 200 190 \
+          --hide-extension "Custom Tests Battery.app" \
+          --app-drop-link 600 185 \
+          "dist/Custom-Tests-Battery.dmg" \
+          "dist/"
+    
+    - name: Upload macOS artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-dmg
+        path: dist/Custom-Tests-Battery.dmg
+        retention-days: 30
+
+  create-release-comment:
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-macos]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/test-github-actions')
+    
+    steps:
+    - name: Create release comment
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { data: artifacts } = await github.rest.actions.listWorkflowRunArtifacts({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            run_id: context.runId,
+          });
+          
+          const windowsArtifact = artifacts.artifacts.find(a => a.name === 'windows-executable');
+          const macosArtifact = artifacts.artifacts.find(a => a.name === 'macos-dmg');
+          
+          const comment = `**Development Build Ready!**
+          
+          New executables have been built from the latest ${github.ref.replace('refs/heads/', '')} branch:
+          
+          **Downloads:**
+          - [Windows (.exe)](${windowsArtifact?.archive_download_url || 'Building...'})
+          - [macOS (.dmg)](${macosArtifact?.archive_download_url || 'Building...'})
+          
+          **For Team Testing:**
+          1. Download the appropriate file for your OS
+          2. Extract if necessary (GitHub downloads as .zip)
+          3. Run the executable to test the latest changes
+          
+          **Build Info:**
+          - Commit: ${context.sha.substring(0, 7)}
+          - Branch: ${github.ref.replace('refs/heads/', '')}
+          - Build: ${context.runId}
+          
+          _Note: Artifacts expire after 30 days_`;
+          
+          // Post as issue comment if this is a PR, otherwise create a discussion
+          if (context.eventName === 'pull_request') {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
+          }

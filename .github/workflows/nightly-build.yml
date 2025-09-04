@@ -1,0 +1,35 @@
+name: Nightly Development Builds
+
+on:
+  schedule:
+    # Run every night at 2 AM UTC (if there were changes)
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.changes.outputs.should_build }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+    
+    - name: Check for recent changes
+      id: changes
+      run: |
+        # Check if there were commits in the last 24 hours
+        if git log --since="24 hours ago" --oneline | grep -q .; then
+          echo "should_build=true" >> $GITHUB_OUTPUT
+          echo "Recent changes detected, will build"
+        else
+          echo "should_build=false" >> $GITHUB_OUTPUT
+          echo "No recent changes, skipping build"
+        fi
+
+  build:
+    needs: check-changes
+    if: needs.check-changes.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/build-executables.yml
