@@ -10,6 +10,10 @@ from crash_recovery_system.session_manager import get_session_manager, initializ
 from crash_recovery_system.task_state_saver import get_recovery_info, CrashDetector
 import crash_recovery_system.crash_handler as crash_handler  # Initialize crash handler
 
+
+## Speech in noise Menu
+from task_speech_in_noise.sin_menu import SpeechInNoiseMenuWindow
+
 class SelectionMenu(QMainWindow):
     def __init__(self, buttons_size=1.0, buttons_elevation=1.0, participant_id=None, participant_folder_path=None, recovery_mode=False):
         super().__init__()
@@ -171,7 +175,8 @@ class SelectionMenu(QMainWindow):
             "Go/No-Go Task",
             "Reading Span Task"
             "Speeded Classification Task",
-            "Auditory Stroop Task"
+            "Auditory Stroop Task",
+            "Speech in Noise Task"
         ]
         
         # Create the six buttons
@@ -536,6 +541,9 @@ class SelectionMenu(QMainWindow):
         
         elif clean_test_name == "Auditory Stroop Task":
             self.launch_auditory_stroop_task(x_pos, y_pos)
+
+        elif clean_test_name == "Speech in Noise Task":
+            self.launch_speech_in_noise_menu(x_pos, y_pos) 
         
         else:
             print(f"Unknown test: {clean_test_name}")
@@ -692,6 +700,64 @@ class SelectionMenu(QMainWindow):
                             f"Error: {str(e)}\n\n"
                             f"Please try again or contact support if the problem persists.")
     
+
+    # Speech in noise task
+    def launch_speech_in_noise_menu(self, x_pos, y_pos):
+        """Launch Speech in Noise menu (6-button submenu) with error handling."""
+        try:
+            print(f"Launching Speech in Noise menu:")
+            print(f"  - Participant ID: {self.participant_id}")
+            print(f"  - Participant folder: {self.participant_folder_path}")
+            print(f"  - Position: x={x_pos}, y={y_pos}")
+            print(f"  - Recovery mode: {self.recovery_mode}")
+            print(f"  - Session manager: {'AVAILABLE' if get_session_manager() else 'NOT AVAILABLE'}")
+
+            from task_speech_in_noise.sin_menu import SpeechInNoiseMenuWindow
+
+            win = SpeechInNoiseMenuWindow(
+                participant_id=self.participant_id,
+                participant_folder_path=self.participant_folder_path,
+            )
+            win.setGeometry(self.geometry())
+            win.show()
+            print("Speech in Noise menu launched successfully")
+
+            # Hide the selection menu 
+            self.hide()
+            self.child_window = win 
+
+        except Exception as e:
+            print(f"Error launching Speech in Noise menu: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+            session_manager = get_session_manager()
+            if session_manager:
+                try:
+                    session_manager.emergency_save()
+                    print("Emergency save completed due to SIN launch error")
+                except Exception as save_error:
+                    print(f"Emergency save failed: {save_error}")
+
+            msg = QMessageBox(self)
+            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.setWindowTitle("Launch Error")
+            msg.setText("Failed to launch Speech in Noise Task!")
+            msg.setInformativeText(f"Error: {str(e)}\n\nPlease try again or contact support.")
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.setStyleSheet("""
+                QMessageBox { background-color: #f6f6f6; font-family: Arial; }
+                QMessageBox QLabel { color: black; font-size: 12px; }
+                QPushButton {
+                    background-color: #e74c3c; color: white; border: none;
+                    border-radius: 5px; padding: 8px 20px; font-weight: bold; min-width: 80px;
+                }
+                QPushButton:hover { background-color: #c0392b; }
+            """)
+            msg.exec()
+
+    
+
     def launch_visual_search_task(self, x_pos, y_pos):
         """Launch Visual Search Task (placeholder)."""
         self.show_not_implemented_message("Visual Search Task")
@@ -737,6 +803,7 @@ class SelectionMenu(QMainWindow):
         except Exception as e:
             print(f"Error launching Auditory Stroop Task: {e}")
             QMessageBox.critical(self, "Launch Error", f"Failed to launch Auditory Stroop Task!\n\n{str(e)}")
+
 
 
     def show_not_implemented_message(self, task_name):
