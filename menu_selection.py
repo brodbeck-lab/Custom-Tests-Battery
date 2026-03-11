@@ -164,6 +164,7 @@ class SelectionMenu(QMainWindow):
         
         # Define button texts - UPDATED to include CVC Task
         button_texts = [
+            "VST Task",
             "Stroop Colour-Word Task",
             "CVC Task",  # CHANGED from "Letter Monitoring Task"
             "Visual Search Task",
@@ -537,6 +538,9 @@ class SelectionMenu(QMainWindow):
         elif clean_test_name == "Auditory Stroop Task":
             self.launch_auditory_stroop_task(x_pos, y_pos)
         
+        elif clean_test_name == "VST Task":
+            self.launch_vst_task(x_pos, y_pos)
+        
         else:
             print(f"Unknown test: {clean_test_name}")
             QMessageBox.warning(self, "Unknown Test", f"Test '{clean_test_name}' is not recognized.")
@@ -737,6 +741,58 @@ class SelectionMenu(QMainWindow):
         except Exception as e:
             print(f"Error launching Auditory Stroop Task: {e}")
             QMessageBox.critical(self, "Launch Error", f"Failed to launch Auditory Stroop Task!\n\n{str(e)}")
+    
+
+    def launch_vst_task(self, x_pos, y_pos):
+        """Launch VST Task with configuration interface and enhanced error handling."""
+        try:
+            print(f"Launching VST task with configuration interface:")
+            print(f"  - Participant ID: {self.participant_id}")
+            print(f"  - Participant folder: {self.participant_folder_path}")
+            print(f"  - Position: x={x_pos}, y={y_pos}")
+            print(f"  - Recovery mode: {self.recovery_mode}")
+            print(f"  - Session manager: {'AVAILABLE' if get_session_manager() else 'NOT AVAILABLE'}")
+            print(f"  - Configuration interface: ENABLED")
+            
+            # Import the VST task
+            from task_vst.vst_task import VSTTask
+            
+            # Create VST task with configuration support and recovery
+            self.vst_task = VSTTask(
+                csv_file=None,
+                x_pos=x_pos, 
+                y_pos=y_pos,
+                participant_id=self.participant_id,
+                participant_folder_path=self.participant_folder_path
+            )
+            
+            # Show the task (it will start in configuration mode)
+            self.vst_task.show()
+            print("VST Task launched successfully with configuration interface")
+            print("User will now configure task parameters before starting")
+            
+            # Hide the selection menu
+            self.hide()
+
+        except Exception as e:
+            print(f"Error launching VST Task: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            
+            # Emergency save if session manager available
+            session_manager = get_session_manager()
+            if session_manager:
+                try:
+                    session_manager.emergency_save()
+                    print("Emergency save completed due to VST launch error")
+                except Exception as save_error:
+                    print(f"Emergency save failed: {save_error}")
+            
+            QMessageBox.critical(self, "Launch Error", 
+                               f"Failed to launch VST task!\n\n"
+                               f"Error: {str(e)}\n\n"
+                               f"Please try again or contact support if the problem persists.")
+    
 
 
     def show_not_implemented_message(self, task_name):
